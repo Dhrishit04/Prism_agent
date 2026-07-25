@@ -1,0 +1,14 @@
+node_modules/
+dist/
+target/
+.env
+*.local
+sidecar/.venv/
+sidecar/__pycache__/
+~/.prism/
+msys2/
+*.msi
+*.exe
+src-tauri/target/
+*.wixobj
+*.wixpdbInput.txt
