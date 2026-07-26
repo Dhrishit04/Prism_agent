@@ -1,8 +1,15 @@
+// Prevents additional console window on Windows in release
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+use std::process::Command;
+use std::env;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
 };
+use tauri_plugin_shell::ShellExt;
 
 mod commands;
 
@@ -16,6 +23,30 @@ pub fn run() {
             Some(vec![]),
         ))
         .setup(|app| {
+            // Spawn Python sidecar
+            let sidecar_status = std::sync::Arc::new(std::sync::Mutex::new(String::from("stopped")));
+            let status_clone = sidecar_status.clone();
+
+            // Spawn the Python sidecar process
+            std::thread::spawn(move || {
+                let output = Command::new("python")
+                    .args(["sidecar/main.py"])
+                    .current_dir(env::current_dir().unwrap_or_default())
+                    .spawn();
+
+                match output {
+                    Ok(mut child) => {
+                        *status_clone.lock().unwrap() = "running".to_string();
+                        let _ = child.wait();
+                        *status_clone.lock().unwrap() = "stopped".to_string();
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to start sidecar: {}", e);
+                        *status_clone.lock().unwrap() = format!("error: {}", e);
+                    }
+                }
+            });
+
             // Build tray menu
             let show = MenuItem::with_id(app, "show", "Show/Hide", true, None::<&str>)?;
             let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
@@ -51,6 +82,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::greet,
             commands::toggle_window,
+            commands::check_sidecar_health,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
