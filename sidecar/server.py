@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
@@ -10,11 +11,30 @@ app = FastAPI(title="Prism Sidecar", version="0.1.0")
 _client: Optional[OpenRouterClient] = None
 
 
+def get_settings_path() -> str:
+    """Get the path to the settings file."""
+    home = os.path.expanduser("~")
+    return os.path.join(home, ".prism", "settings.json")
+
+
+def load_settings() -> dict:
+    """Load settings from the config file."""
+    path = get_settings_path()
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
 def get_client() -> OpenRouterClient:
     global _client
     if _client is None:
-        # TODO: Phase 4 — read API key from settings
-        api_key = ""
+        # Try to load API key from settings
+        settings = load_settings()
+        api_key = settings.get("openrouter_api_key", "")
         _client = OpenRouterClient(api_key=api_key)
     return _client
 
@@ -88,3 +108,9 @@ async def configure(data: dict):
     api_key = data.get("api_key", "")
     _client = OpenRouterClient(api_key=api_key)
     return {"status": "ok"}
+
+
+@app.get("/settings")
+async def get_settings():
+    """Get current settings from the config file."""
+    return load_settings()

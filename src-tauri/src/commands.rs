@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+pub mod settings;
+
 #[tauri::command]
 pub fn greet(name: &str) -> String {
     format!("Hello, {}! Prism is ready.", name)

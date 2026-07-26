@@ -8,6 +8,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
+    Emitter,
 };
 use tauri_plugin_shell::ShellExt;
 
@@ -67,7 +68,12 @@ pub fn run() {
                             }
                         }
                         "settings" => {
-                            // TODO: emit event to frontend to open settings
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                // Emit event to open settings panel
+                                let _ = app.emit("open-settings", ());
+                            }
                         }
                         "quit" => {
                             app.exit(0);
@@ -83,6 +89,10 @@ pub fn run() {
             commands::greet,
             commands::toggle_window,
             commands::check_sidecar_health,
+            commands::settings::get_settings,
+            commands::settings::save_settings,
+            commands::settings::reset_settings,
+            commands::settings::get_config_path,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
