@@ -1,7 +1,7 @@
 """OpenRouter LLM client with streaming support."""
 
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 import httpx
 
@@ -21,19 +21,27 @@ class OpenRouterClient:
         }
 
     async def chat_stream(
-        self, messages: list[dict], model: str = DEFAULT_MODEL
+        self,
+        messages: list[dict],
+        model: str = DEFAULT_MODEL,
+        tools: Optional[list[dict]] = None,
     ) -> AsyncGenerator[str, None]:
         """Stream chat completion from OpenRouter. Yields content deltas."""
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
         async with httpx.AsyncClient(timeout=60.0) as client:
             async with client.stream(
                 "POST",
                 f"{self.base_url}/chat/completions",
                 headers=self.headers,
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "stream": True,
-                },
+                json=payload,
             ) as response:
                 if response.status_code != 200:
                     error_body = await response.aread()
@@ -52,8 +60,11 @@ class OpenRouterClient:
                             chunk = json.loads(data)
                             delta = chunk.get("choices", [{}])[0].get("delta", {})
                             content = delta.get("content", "")
+                            tool_calls = delta.get("tool_calls")
                             if content:
                                 yield json.dumps({"content": content})
+                            if tool_calls:
+                                yield json.dumps({"tool_calls": tool_calls})
                         except json.JSONDecodeError:
                             continue
 
@@ -70,18 +81,26 @@ class OpenRouterClient:
             return []
 
     async def chat(
-        self, messages: list[dict], model: str = DEFAULT_MODEL
+        self,
+        messages: list[dict],
+        model: str = DEFAULT_MODEL,
+        tools: Optional[list[dict]] = None,
     ) -> dict:
         """Non-streaming chat completion."""
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 headers=self.headers,
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "stream": False,
-                },
+                json=payload,
             )
             if response.status_code != 200:
                 return {

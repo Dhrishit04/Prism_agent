@@ -91,6 +91,10 @@ export function useChat() {
                     )
                   );
                 }
+                // Tool calls are executed server-side; we can optionally display them
+                if (parsed.tool_calls) {
+                  console.debug("Tool calls (executed server-side):", parsed.tool_calls);
+                }
               } catch {
                 // skip parse errors
               }

@@ -1,0 +1,83 @@
+"""Abstract base class for Prism skills."""
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class SkillResult:
+    """Result of a skill execution."""
+    success: bool
+    data: Any = None
+    error: str | None = None
+
+    @classmethod
+    def success(cls, data: Any = None) -> "SkillResult":
+        return cls(success=True, data=data)
+
+    @classmethod
+    def failure(cls, error: str) -> "SkillResult":
+        return cls(success=False, error=error)
+
+
+class SkillBase(ABC):
+    """Abstract base class for all Prism skills.
+
+    Each skill must implement:
+    - name: unique identifier for the skill
+    - description: human-readable description for the LLM
+    - parameters: JSON schema describing the skill's parameters
+    - execute: the actual implementation
+    """
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Unique skill name (e.g., 'gmail.read_inbox', 'filesystem.read_file')."""
+        pass
+
+    @property
+    @abstractmethod
+    def description(self) -> str:
+        """Human-readable description for the LLM to understand when to use this skill."""
+        pass
+
+    @property
+    @abstractmethod
+    def parameters(self) -> dict[str, Any]:
+        """JSON Schema describing the skill's parameters.
+
+        Should follow OpenAI function calling schema format:
+        {
+            "type": "object",
+            "properties": {
+                "param_name": {"type": "string", "description": "..."}
+            },
+            "required": ["param_name"]
+        }
+        """
+        pass
+
+    @abstractmethod
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        """Execute the skill with the given parameters.
+
+        Args:
+            **kwargs: Parameters matching the schema defined in `parameters`
+
+        Returns:
+            SkillResult with success status, data, or error message
+        """
+        pass
+
+    def to_tool_definition(self) -> dict[str, Any]:
+        """Convert skill to OpenAI-compatible tool definition."""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters,
+            },
+        }
