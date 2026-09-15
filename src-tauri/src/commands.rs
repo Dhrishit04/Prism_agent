@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 pub mod settings;
+pub mod voice;
 
 #[tauri::command]
 pub fn greet(name: &str) -> String {

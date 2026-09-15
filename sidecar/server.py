@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from typing import Optional, AsyncGenerator
 
@@ -9,6 +10,10 @@ from pydantic import BaseModel
 from llm.openrouter import OpenRouterClient, DEFAULT_MODEL
 from skills.registry import get_registry
 from skills.skill_base import SkillResult
+from voice import get_wake_word_skill, get_stt_skill, get_tts_skill, get_pipeline
+from voice.wake_word import VOICE_DEPS_AVAILABLE
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Prism Sidecar", version="0.1.0")
 _client: Optional[OpenRouterClient] = None
@@ -295,3 +300,225 @@ async def reload_skills():
         "status": "reloaded",
         "skills": list(skills.keys()),
     }
+
+
+# --- Voice Pipeline Endpoints ---
+
+class VoiceSettingsRequest(BaseModel):
+    """Voice settings update request."""
+    settings: dict
+
+
+@app.on_event("startup")
+async def init_voice_pipeline():
+    """Initialize voice pipeline on startup."""
+    settings = load_settings()
+    voice_settings = settings.get("voice", {})
+
+    if not VOICE_DEPS_AVAILABLE:
+        logger.warning("Voice dependencies not available. Voice features disabled. Install with: pip install -e '.[voice]'")
+        return
+
+    # Initialize wake word skill
+    wake_word_skill = get_wake_word_skill()
+    wake_word_skill.load_settings(settings)
+
+    # Initialize STT skill
+    stt_skill = get_stt_skill()
+    stt_skill.load_settings(settings)
+
+    # Initialize TTS skill
+    tts_skill = get_tts_skill()
+    tts_skill.load_settings(settings)
+    # Set OpenRouter client for TTS fallback
+    client = get_client()
+    tts_skill.set_openrouter_client(client)
+    await tts_skill.initialize()
+
+    # Initialize voice pipeline orchestrator
+    pipeline = get_pipeline()
+    pipeline.set_components(wake_word_skill, stt_skill, tts_skill)
+
+    # Create LLM handler for the pipeline
+    async def llm_handler(text: str) -> str:
+        """Send text to LLM and return the full response."""
+        client = get_client()
+        if not client.api_key:
+            return "Please configure your OpenRouter API key in Settings first."
+
+        registry = get_skill_registry()
+        tools = registry.get_tool_definitions()
+        messages = [{"role": "user", "content": text}]
+        result = await client.chat(messages, tools=tools)
+        if result.get("error"):
+            return f"Error: {result.get('message', 'Unknown error')}"
+        return result["choices"][0]["message"].get("content", "")
+
+    pipeline.set_llm_handler(llm_handler)
+
+
+@app.get("/voice/status")
+async def voice_status():
+    """Get voice pipeline status."""
+    settings = load_settings()
+    wake_word_skill = get_wake_word_skill()
+    wake_word_skill.load_settings(settings)
+    stt_skill = get_stt_skill()
+    stt_skill.load_settings(settings)
+    tts_skill = get_tts_skill()
+    tts_skill.load_settings(settings)
+    pipeline = get_pipeline()
+
+    return {
+        "wake_word": wake_word_skill.get_status(),
+        "stt": stt_skill.get_status(),
+        "tts": tts_skill.get_status(),
+        "pipeline": pipeline.get_status(),
+        "enabled": settings.get("voice", {}).get("voice_enabled", False),
+    }
+
+
+@app.post("/voice/wake-word/start")
+async def start_wake_word():
+    """Start wake word detection."""
+    settings = load_settings()
+    wake_word_skill = get_wake_word_skill()
+    wake_word_skill.load_settings(settings)
+
+    if not settings.get("voice", {}).get("wake_word_enabled", False):
+        return {"success": False, "error": "Wake word detection is disabled in settings"}
+
+    result = await wake_word_skill.start_listening()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/wake-word/stop")
+async def stop_wake_word():
+    """Stop wake word detection."""
+    wake_word_skill = get_wake_word_skill()
+    result = await wake_word_skill.stop_listening()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/stt/transcribe")
+async def stt_transcribe(request: dict):
+    """Transcribe audio file or start/stop recording."""
+    audio_path = request.get("audio_path")
+    settings = load_settings()
+    stt_skill = get_stt_skill()
+    stt_skill.load_settings(settings)
+
+    if audio_path:
+        result = await stt_skill.transcribe(audio_path=audio_path)
+    else:
+        result = await stt_skill.transcribe()
+
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/stt/start")
+async def stt_start_recording():
+    """Start recording for STT."""
+    settings = load_settings()
+    stt_skill = get_stt_skill()
+    stt_skill.load_settings(settings)
+
+    result = await stt_skill.start_recording()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/stt/stop")
+async def stt_stop_recording():
+    """Stop recording and transcribe."""
+    settings = load_settings()
+    stt_skill = get_stt_skill()
+    stt_skill.load_settings(settings)
+
+    result = await stt_skill.stop_recording()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/tts/speak")
+async def tts_speak(request: dict):
+    """Speak text using TTS."""
+    text = request.get("text", "")
+    if not text:
+        return {"success": False, "error": "Text is required"}
+
+    settings = load_settings()
+    tts_skill = get_tts_skill()
+    tts_skill.load_settings(settings)
+    # Ensure OpenRouter client is set
+    client = get_client()
+    tts_skill.set_openrouter_client(client)
+
+    result = await tts_skill.speak(text)
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/tts/stop")
+async def tts_stop():
+    """Stop current TTS playback."""
+    settings = load_settings()
+    tts_skill = get_tts_skill()
+    tts_skill.load_settings(settings)
+
+    result = await tts_skill.stop()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/settings")
+async def update_voice_settings(request: VoiceSettingsRequest):
+    """Update voice settings."""
+    settings = load_settings()
+    if "voice" not in settings:
+        settings["voice"] = {}
+    settings["voice"].update(request.settings)
+
+    # Save settings
+    path = get_settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    # Reload voice skills with new settings
+    wake_word_skill = get_wake_word_skill()
+    wake_word_skill.load_settings(settings)
+    stt_skill = get_stt_skill()
+    stt_skill.load_settings(settings)
+    tts_skill = get_tts_skill()
+    tts_skill.load_settings(settings)
+    client = get_client()
+    tts_skill.set_openrouter_client(client)
+    await tts_skill.initialize()
+
+    return {"success": True, "settings": settings["voice"]}
+
+
+# --- Voice Pipeline Orchestration Endpoints ---
+
+@app.post("/voice/pipeline/start")
+async def start_voice_pipeline():
+    """Start the full voice pipeline (wake word → STT → LLM → TTS loop)."""
+    settings = load_settings()
+    if not settings.get("voice", {}).get("voice_enabled", False):
+        return {"success": False, "error": "Voice is disabled in settings"}
+
+    pipeline = get_pipeline()
+    result = await pipeline.start()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.post("/voice/pipeline/stop")
+async def stop_voice_pipeline():
+    """Stop the voice pipeline."""
+    pipeline = get_pipeline()
+    result = await pipeline.stop()
+    return {"success": result.success, "data": result.data, "error": result.error}
+
+
+@app.get("/voice/pipeline/status")
+async def voice_pipeline_status():
+    """Get voice pipeline orchestrator status."""
+    pipeline = get_pipeline()
+    return pipeline.get_status()

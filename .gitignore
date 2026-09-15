@@ -13,5 +13,4 @@ src-tauri/target/
 *.wixobj
 *.wixpdbInput.txt
 
-docs\superpowers\plans\
-docs\superpowers\specs\
+docs/

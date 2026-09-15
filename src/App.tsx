@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useChat } from "./hooks/useChat";
 import { ModelPicker } from "./components/ModelPicker";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { VoiceIndicator } from "./components/VoiceIndicator";
 
 function App() {
   const {
@@ -98,7 +99,17 @@ function App() {
           </button>
           <span className="text-sm text-prism-text-muted flex-1">Prism AI</span>
           {activeView === "chat" && (
-            <ModelPicker currentModel={currentModel} onModelChange={setCurrentModel} />
+            <>
+              <ModelPicker currentModel={currentModel} onModelChange={setCurrentModel} />
+              <VoiceIndicator
+                onTranscription={(text) => {
+                  // Send transcribed text as a chat message
+                  if (text.trim()) {
+                    sendMessage(text.trim());
+                  }
+                }}
+              />
+            </>
           )}
         </header>
 

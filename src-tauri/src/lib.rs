@@ -93,6 +93,15 @@ pub fn run() {
             commands::settings::save_settings,
             commands::settings::reset_settings,
             commands::settings::get_config_path,
+            commands::voice::get_voice_status,
+            commands::voice::start_wake_word,
+            commands::voice::stop_wake_word,
+            commands::voice::start_stt_recording,
+            commands::voice::stop_stt_recording,
+            commands::voice::speak_text,
+            commands::voice::stop_tts,
+            commands::voice::start_voice_pipeline,
+            commands::voice::stop_voice_pipeline,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

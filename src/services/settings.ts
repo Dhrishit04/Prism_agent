@@ -2,10 +2,23 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+export interface VoiceSettings {
+  voice_enabled: boolean;
+  wake_word: string;
+  wake_word_enabled: boolean;
+  porcupine_access_key: string;
+  stt_model: string;
+  stt_language: string;
+  tts_engine: string;
+  tts_voice: string;
+  tts_speed: number;
+  openrouter_tts_voice: string;
+}
+
 export interface Settings {
   openrouter_api_key: string;
   default_model: string;
-  voice_enabled: boolean;
+  voice: VoiceSettings;
   automation_enabled: boolean;
   theme: string;
   language: string;
