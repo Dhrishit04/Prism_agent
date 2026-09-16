@@ -15,6 +15,14 @@ export interface VoiceSettings {
   openrouter_tts_voice: string;
 }
 
+export interface AutomationSettings {
+  automation_enabled: boolean;
+  browser_timeout: number;
+  headless_default: boolean;
+  ocr_enabled: boolean;
+  office_use_com: boolean;
+}
+
 export interface GoogleAuthSettings {
   client_id: string;
   client_secret: string;
@@ -26,7 +34,7 @@ export interface Settings {
   openrouter_api_key: string;
   default_model: string;
   voice: VoiceSettings;
-  automation_enabled: boolean;
+  automation: AutomationSettings;
   theme: string;
   language: string;
   google: GoogleAuthSettings;

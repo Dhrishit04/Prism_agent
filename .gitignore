@@ -5,9 +5,9 @@ target/
 *.local
 sidecar/.venv/
 sidecar/__pycache__/
-sidecar/skills/__pycache__/
-sidecar/auth/__pycache__/
-sidecar/voice/__pycache__/
+sidecar/**/__pycache__/
+sidecar/prism_sidecar.egg-info/
+sidecar/*.log
 ~/.prism/
 msys2/
 *.msi

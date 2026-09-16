@@ -16,6 +16,27 @@ pub struct VoiceSettings {
     pub openrouter_tts_voice: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct AutomationSettings {
+    pub automation_enabled: bool,
+    pub browser_timeout: u32,
+    pub headless_default: bool,
+    pub ocr_enabled: bool,
+    pub office_use_com: bool,
+}
+
+impl Default for AutomationSettings {
+    fn default() -> Self {
+        Self {
+            automation_enabled: false,
+            browser_timeout: 30000,
+            headless_default: true,
+            ocr_enabled: false,
+            office_use_com: false,
+        }
+    }
+}
+
 impl Default for VoiceSettings {
     fn default() -> Self {
         Self {
@@ -46,7 +67,7 @@ pub struct Settings {
     pub openrouter_api_key: String,
     pub default_model: String,
     pub voice: VoiceSettings,
-    pub automation_enabled: bool,
+    pub automation: AutomationSettings,
     pub theme: String,
     pub language: String,
     pub google: GoogleAuthSettings,

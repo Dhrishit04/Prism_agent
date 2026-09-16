@@ -17,7 +17,13 @@ export function SettingsPanel() {
       tts_speed: 1.0,
       openrouter_tts_voice: "alloy",
     },
-    automation_enabled: false,
+    automation: {
+      automation_enabled: false,
+      browser_timeout: 30000,
+      headless_default: true,
+      ocr_enabled: false,
+      office_use_com: false,
+    },
     theme: "dark",
     language: "en",
     google: {
@@ -64,6 +70,12 @@ export function SettingsPanel() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ settings: settings.voice }),
+        });
+        // Also update automation settings in sidecar
+        await fetch("http://127.0.0.1:8765/automation/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ settings: settings.automation }),
         });
         // Also update Google auth settings in sidecar
         if (settings.google.client_id && settings.google.client_secret) {
@@ -120,16 +132,24 @@ export function SettingsPanel() {
         "connected",
         "email",
       ];
+      const automationKeys = [
+        "automation_enabled",
+        "browser_timeout",
+        "headless_default",
+        "ocr_enabled",
+        "office_use_com",
+      ];
       if (key.startsWith("voice.") || voiceKeys.includes(key)) {
         next.voice = { ...prev.voice, [key.replace("voice.", "")]: value };
       } else if (key.startsWith("google.") || googleKeys.includes(key)) {
         next.google = { ...prev.google, [key.replace("google.", "")]: value };
+      } else if (key.startsWith("automation.") || automationKeys.includes(key)) {
+        next.automation = { ...prev.automation, [key.replace("automation.", "")]: value };
       } else {
         // Type-safe assignment for top-level settings keys
         const topLevelKeys = [
           "openrouter_api_key",
           "default_model",
-          "automation_enabled",
           "theme",
           "language",
         ] as const;
@@ -419,13 +439,74 @@ export function SettingsPanel() {
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
-            checked={settings.automation_enabled}
-            onChange={(e) => handleChange("automation_enabled", e.target.checked)}
+            checked={settings.automation.automation_enabled}
+            onChange={(e) => handleChange("automation.automation_enabled", e.target.checked)}
             className="w-5 h-5 accent-prism-accent border-prism-border bg-prism-darker rounded"
           />
           <span className="text-prism-text">Enable GUI automation (web + desktop)</span>
         </label>
         <p className="text-prism-text-muted text-sm ml-8">Allows Prism to control browser, apps, and desktop (Phases 9-11)</p>
+
+        <div className="pt-4 border-t border-prism-border">
+          <h4 className="text-md font-medium text-prism-text mb-3">Web Automation Settings</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-prism-text-muted mb-2">Browser Timeout (ms)</label>
+              <input
+                type="number"
+                value={settings.automation.browser_timeout}
+                onChange={(e) => handleChange("automation.browser_timeout", parseInt(e.target.value))}
+                min="5000"
+                max="120000"
+                step="5000"
+                className={inputClass}
+              />
+              <p className="text-prism-text-muted text-sm mt-1">Maximum time to wait for browser actions</p>
+            </div>
+            <div>
+              <label className="block text-sm text-prism-text-muted mb-2">Default Mode</label>
+              <select
+                value={settings.automation.headless_default ? "headless" : "headed"}
+                onChange={(e) => handleChange("automation.headless_default", e.target.value === "headless")}
+                className={inputClass}
+              >
+                <option value="headless">Headless (faster, no UI)</option>
+                <option value="headed">Headed (visible browser)</option>
+              </select>
+              <p className="text-prism-text-muted text-sm mt-1">Headed mode useful for debugging complex tasks</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-prism-border">
+          <h4 className="text-md font-medium text-prism-text mb-3">Desktop & Office Settings</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.automation.ocr_enabled}
+                  onChange={(e) => handleChange("automation.ocr_enabled", e.target.checked)}
+                  className="w-4 h-4 accent-prism-accent border-prism-border bg-prism-darker rounded"
+                />
+                <span className="text-prism-text">Enable OCR fallback (Tesseract)</span>
+              </label>
+              <p className="text-prism-text-muted text-sm mt-1 ml-6">Use OCR when accessibility API fails</p>
+            </div>
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.automation.office_use_com}
+                  onChange={(e) => handleChange("automation.office_use_com", e.target.checked)}
+                  className="w-4 h-4 accent-prism-accent border-prism-border bg-prism-darker rounded"
+                />
+                <span className="text-prism-text">Use COM for Office (Windows)</span>
+              </label>
+              <p className="text-prism-text-muted text-sm mt-1 ml-6">Use Microsoft Office COM automation when available</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Google Auth Settings */}

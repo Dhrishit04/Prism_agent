@@ -24,3 +24,10 @@ google = [
     "google-api-python-client>=2.0.0",
     "cryptography>=42.0.0",
 ]
+automation = [
+    "playwright>=1.40.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]

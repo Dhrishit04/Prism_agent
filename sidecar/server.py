@@ -13,6 +13,8 @@ from skills.skill_base import SkillResult
 from voice import get_wake_word_skill, get_stt_skill, get_tts_skill, get_pipeline
 from voice.wake_word import VOICE_DEPS_AVAILABLE
 from auth.google_oauth import get_google_oauth_manager
+from automation.orchestrator import AutomationOrchestrator
+from automation.browser import WebAutomation
 
 logger = logging.getLogger(__name__)
 
@@ -530,6 +532,232 @@ async def voice_pipeline_status():
     """Get voice pipeline orchestrator status."""
     pipeline = get_pipeline()
     return pipeline.get_status()
+
+
+# --- Automation Orchestrator Initialization ---
+
+_automation_orchestrator: Optional[AutomationOrchestrator] = None
+
+
+def get_automation_orchestrator() -> AutomationOrchestrator:
+    """Get or create the global automation orchestrator."""
+    global _automation_orchestrator
+    if _automation_orchestrator is None:
+        _automation_orchestrator = AutomationOrchestrator()
+    return _automation_orchestrator
+
+
+@app.on_event("startup")
+async def init_automation():
+    """Initialize automation orchestrator on startup."""
+    settings = load_settings()
+    automation_settings = settings.get("automation", {})
+
+    if not automation_settings.get("automation_enabled", False):
+        logger.info("Automation is disabled in settings")
+        return
+
+    orchestrator = get_automation_orchestrator()
+    # Pre-configure with settings
+    orchestrator.mode = AutomationOrchestrator.AutomationMode.WEB
+    logger.info("Automation orchestrator initialized")
+
+
+# --- Web Automation API Endpoints ---
+
+class WebNavigateRequest(BaseModel):
+    url: str
+    wait_until: str = "networkidle"
+    headless: bool = True
+
+
+class WebActionRequest(BaseModel):
+    selector: str
+
+
+class WebTypeRequest(BaseModel):
+    selector: str
+    text: str
+
+
+class WebExtractRequest(BaseModel):
+    selector: str
+    attribute: str = "textContent"
+
+
+class WebScreenshotRequest(BaseModel):
+    full_page: bool = False
+
+
+class WebWaitRequest(BaseModel):
+    selector: str
+    state: str = "visible"
+
+
+@app.post("/automation/web/start")
+async def start_web_automation(request: WebNavigateRequest = None):
+    """Start web automation browser session."""
+    settings = load_settings()
+    automation_settings = settings.get("automation", {})
+
+    if not automation_settings.get("automation_enabled", False):
+        return {"success": False, "error": "Automation is disabled in settings"}
+
+    orchestrator = get_automation_orchestrator()
+
+    headless = automation_settings.get("headless_default", True)
+    timeout = automation_settings.get("browser_timeout", 30000)
+
+    if request:
+        headless = request.headless
+
+    try:
+        await orchestrator.start_web(headless=headless, timeout=timeout)
+        return {"success": True, "data": {"mode": "web", "headless": headless, "timeout": timeout}}
+    except Exception as e:
+        logger.error(f"Error starting web automation: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/stop")
+async def stop_web_automation():
+    """Stop web automation browser session."""
+    orchestrator = get_automation_orchestrator()
+    try:
+        await orchestrator.stop_web()
+        return {"success": True, "data": {"status": "stopped"}}
+    except Exception as e:
+        logger.error(f"Error stopping web automation: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/automation/web/status")
+async def web_automation_status():
+    """Get web automation status."""
+    orchestrator = get_automation_orchestrator()
+    return orchestrator.get_status()
+
+
+@app.post("/automation/web/navigate")
+async def web_navigate(request: WebNavigateRequest):
+    """Navigate to a URL."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started. Call /automation/web/start first."}
+
+    try:
+        result = await orchestrator.execute_web_action("navigate", url=request.url, wait_until=request.wait_until)
+        return result
+    except Exception as e:
+        logger.error(f"Error navigating: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/click")
+async def web_click(request: WebActionRequest):
+    """Click an element."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started."}
+
+    try:
+        result = await orchestrator.execute_web_action("click", selector=request.selector)
+        return result
+    except Exception as e:
+        logger.error(f"Error clicking: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/type")
+async def web_type(request: WebTypeRequest):
+    """Type into an element."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started."}
+
+    try:
+        result = await orchestrator.execute_web_action("type", selector=request.selector, text=request.text)
+        return result
+    except Exception as e:
+        logger.error(f"Error typing: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/extract")
+async def web_extract(request: WebExtractRequest):
+    """Extract content from elements."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started."}
+
+    try:
+        result = await orchestrator.execute_web_action("extract", selector=request.selector, attribute=request.attribute)
+        return result
+    except Exception as e:
+        logger.error(f"Error extracting: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/screenshot")
+async def web_screenshot(request: WebScreenshotRequest):
+    """Take a screenshot."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started."}
+
+    try:
+        result = await orchestrator.execute_web_action("screenshot", full_page=request.full_page)
+        return result
+    except Exception as e:
+        logger.error(f"Error taking screenshot: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/wait")
+async def web_wait(request: WebWaitRequest):
+    """Wait for element."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started."}
+
+    try:
+        result = await orchestrator.execute_web_action("wait_for", selector=request.selector, state=request.state)
+        return result
+    except Exception as e:
+        logger.error(f"Error waiting: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/web/content")
+async def web_get_content():
+    """Get page content for LLM analysis."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.web_automation:
+        return {"success": False, "error": "Web automation not started."}
+
+    try:
+        result = await orchestrator.execute_web_action("get_page_content")
+        return result
+    except Exception as e:
+        logger.error(f"Error getting page content: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/settings")
+async def update_automation_settings(request: dict):
+    """Update automation settings."""
+    settings = load_settings()
+    if "automation" not in settings:
+        settings["automation"] = {}
+    settings["automation"].update(request.get("settings", {}))
+
+    # Save settings
+    path = get_settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    return {"success": True, "settings": settings["automation"]}
 
 
 # --- Google OAuth Endpoints ---
