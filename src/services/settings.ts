@@ -15,6 +15,13 @@ export interface VoiceSettings {
   openrouter_tts_voice: string;
 }
 
+export interface GoogleAuthSettings {
+  client_id: string;
+  client_secret: string;
+  connected: boolean;
+  email: string;
+}
+
 export interface Settings {
   openrouter_api_key: string;
   default_model: string;
@@ -22,6 +29,7 @@ export interface Settings {
   automation_enabled: boolean;
   theme: string;
   language: string;
+  google: GoogleAuthSettings;
 }
 
 export async function getSettings(): Promise<Settings> {

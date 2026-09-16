@@ -5,6 +5,9 @@ target/
 *.local
 sidecar/.venv/
 sidecar/__pycache__/
+sidecar/skills/__pycache__/
+sidecar/auth/__pycache__/
+sidecar/voice/__pycache__/
 ~/.prism/
 msys2/
 *.msi

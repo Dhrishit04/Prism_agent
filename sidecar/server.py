@@ -3,8 +3,8 @@ import logging
 import os
 from typing import Optional, AsyncGenerator
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse, RedirectResponse
 from pydantic import BaseModel
 
 from llm.openrouter import OpenRouterClient, DEFAULT_MODEL
@@ -12,6 +12,7 @@ from skills.registry import get_registry
 from skills.skill_base import SkillResult
 from voice import get_wake_word_skill, get_stt_skill, get_tts_skill, get_pipeline
 from voice.wake_word import VOICE_DEPS_AVAILABLE
+from auth.google_oauth import get_google_oauth_manager
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +76,15 @@ class SkillExecuteRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize skill registry on startup."""
+    """Initialize skill registry and Google OAuth on startup."""
     get_skill_registry()
+
+    # Initialize Google OAuth manager with settings
+    settings = load_settings()
+    oauth = get_google_oauth_manager()
+    oauth.load_settings(settings)
+    # Try to load saved credentials
+    await oauth.load_credentials()
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -522,3 +530,95 @@ async def voice_pipeline_status():
     """Get voice pipeline orchestrator status."""
     pipeline = get_pipeline()
     return pipeline.get_status()
+
+
+# --- Google OAuth Endpoints ---
+
+class GoogleAuthConfigRequest(BaseModel):
+    """Google OAuth configuration request."""
+    client_id: str
+    client_secret: str
+
+
+@app.get("/google/auth/url")
+async def google_auth_url():
+    """Get Google OAuth authorization URL."""
+    oauth = get_google_oauth_manager()
+    if not oauth.is_configured():
+        return {"success": False, "error": "Google OAuth not configured. Set client_id and client_secret in settings."}
+    try:
+        url = oauth.get_authorization_url()
+        return {"success": True, "auth_url": url}
+    except Exception as e:
+        logger.error(f"Error generating auth URL: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/oauth/callback")
+async def oauth_callback(request: Request):
+    """Handle Google OAuth callback."""
+    code = request.query_params.get("code")
+    error = request.query_params.get("error")
+
+    if error:
+        return RedirectResponse(url=f"/oauth/callback?error={error}")
+
+    if not code:
+        return RedirectResponse(url="/oauth/callback?error=no_code")
+
+    oauth = get_google_oauth_manager()
+    status = await oauth.handle_callback(code)
+
+    # Redirect to frontend with status
+    if status.connected:
+        return RedirectResponse(url="/?google_auth=success")
+    else:
+        return RedirectResponse(url=f"/?google_auth=error&message={status.error}")
+
+
+@app.get("/google/auth/status")
+async def google_auth_status():
+    """Get Google OAuth connection status."""
+    oauth = get_google_oauth_manager()
+    status = await oauth.get_status()
+    return {
+        "success": True,
+        "connected": status.connected,
+        "email": status.email,
+        "scopes": status.scopes,
+        "expires_at": status.expires_at,
+        "error": status.error,
+    }
+
+
+@app.post("/google/auth/configure")
+async def google_auth_configure(request: GoogleAuthConfigRequest):
+    """Configure Google OAuth credentials."""
+    oauth = get_google_oauth_manager()
+    oauth.configure(request.client_id, request.client_secret)
+
+    # Save to settings file
+    settings = load_settings()
+    if "google" not in settings:
+        settings["google"] = {}
+    settings["google"]["client_id"] = request.client_id
+    settings["google"]["client_secret"] = request.client_secret
+
+    path = get_settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    return {"success": True, "message": "Google OAuth configured"}
+
+
+@app.post("/google/auth/disconnect")
+async def google_auth_disconnect():
+    """Disconnect Google account and remove tokens."""
+    oauth = get_google_oauth_manager()
+    status = await oauth.disconnect()
+    return {
+        "success": not status.connected,
+        "connected": status.connected,
+        "error": status.error,
+    }

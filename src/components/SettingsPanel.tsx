@@ -20,6 +20,12 @@ export function SettingsPanel() {
     automation_enabled: false,
     theme: "dark",
     language: "en",
+    google: {
+      client_id: "",
+      client_secret: "",
+      connected: false,
+      email: "",
+    },
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,6 +65,17 @@ export function SettingsPanel() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ settings: settings.voice }),
         });
+        // Also update Google auth settings in sidecar
+        if (settings.google.client_id && settings.google.client_secret) {
+          await fetch("http://127.0.0.1:8765/google/auth/configure", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: settings.google.client_id,
+              client_secret: settings.google.client_secret,
+            }),
+          });
+        }
       } catch {
         // Sidecar might not be running, that's okay
       }
@@ -97,10 +114,18 @@ export function SettingsPanel() {
         "tts_speed",
         "openrouter_tts_voice",
       ];
+      const googleKeys = [
+        "client_id",
+        "client_secret",
+        "connected",
+        "email",
+      ];
       if (key.startsWith("voice.") || voiceKeys.includes(key)) {
         next.voice = { ...prev.voice, [key.replace("voice.", "")]: value };
+      } else if (key.startsWith("google.") || googleKeys.includes(key)) {
+        next.google = { ...prev.google, [key.replace("google.", "")]: value };
       } else {
-        // Type-safe assignment for top-level settings keys (excluding 'voice' which is handled above)
+        // Type-safe assignment for top-level settings keys
         const topLevelKeys = [
           "openrouter_api_key",
           "default_model",
@@ -401,6 +426,112 @@ export function SettingsPanel() {
           <span className="text-prism-text">Enable GUI automation (web + desktop)</span>
         </label>
         <p className="text-prism-text-muted text-sm ml-8">Allows Prism to control browser, apps, and desktop (Phases 9-11)</p>
+      </section>
+
+      {/* Google Auth Settings */}
+      <section className="bg-prism-surface border border-prism-border rounded-xl p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-prism-text flex items-center gap-2">
+          <span className="text-prism-accent">📧</span> Google Account (Gmail & Calendar)
+        </h3>
+
+        {!settings.google.connected ? (
+          // Not connected - show connect button and credentials input
+          <div className="space-y-4">
+            <p className="text-prism-text-muted text-sm">
+              Connect your Google account to enable Gmail and Calendar skills.
+              Get credentials from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-prism-accent hover:underline">Google Cloud Console</a>.
+            </p>
+            <div>
+              <label className="block text-sm text-prism-text-muted mb-2">Client ID</label>
+              <input
+                type="text"
+                value={settings.google.client_id}
+                onChange={(e) => handleChange("google.client_id", e.target.value)}
+                placeholder="your-client-id.apps.googleusercontent.com"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-prism-text-muted mb-2">Client Secret</label>
+              <input
+                type="password"
+                value={settings.google.client_secret}
+                onChange={(e) => handleChange("google.client_secret", e.target.value)}
+                placeholder="GOCSPX-..."
+                className={inputClass}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch("http://127.0.0.1:8765/google/auth/configure", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        client_id: settings.google.client_id,
+                        client_secret: settings.google.client_secret,
+                      }),
+                    });
+                    if (response.ok) {
+                      const authUrlResponse = await fetch("http://127.0.0.1:8765/google/auth/url");
+                      const authData = await authUrlResponse.json();
+                      if (authData.auth_url) {
+                        window.open(authData.auth_url, "_blank", "width=500,height=600");
+                      }
+                    } else {
+                      const err = await response.json();
+                      setMessage({ type: "error", text: err.error || "Failed to configure" });
+                    }
+                  } catch (err) {
+                    setMessage({ type: "error", text: "Failed to start OAuth flow" });
+                  }
+                }}
+                disabled={!settings.google.client_id || !settings.google.client_secret || saving}
+                className="px-4 py-2 bg-prism-accent hover:bg-prism-accent-hover text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Connect Google Account
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Connected - show status and disconnect
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-prism-darker rounded-lg">
+              <span className="text-2xl">✅</span>
+              <div>
+                <p className="text-prism-text font-medium">Connected as {settings.google.email}</p>
+                <p className="text-prism-text-muted text-sm">Gmail & Calendar skills are available</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch("http://127.0.0.1:8765/google/auth/disconnect", {
+                      method: "POST",
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                      setSettings(prev => ({
+                        ...prev,
+                        google: { ...prev.google, connected: false, email: "" },
+                      }));
+                      setMessage({ type: "success", text: "Google account disconnected" });
+                    } else {
+                      setMessage({ type: "error", text: data.error || "Failed to disconnect" });
+                    }
+                  } catch (err) {
+                    setMessage({ type: "error", text: "Failed to disconnect" });
+                  }
+                }}
+                className="px-4 py-2 bg-prism-border hover:bg-prism-border/80 text-prism-text rounded-lg transition-colors text-sm"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Appearance Settings */}

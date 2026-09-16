@@ -34,6 +34,14 @@ impl Default for VoiceSettings {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct GoogleAuthSettings {
+    pub client_id: String,
+    pub client_secret: String,
+    pub connected: bool,
+    pub email: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Settings {
     pub openrouter_api_key: String,
     pub default_model: String,
@@ -41,6 +49,7 @@ pub struct Settings {
     pub automation_enabled: bool,
     pub theme: String,
     pub language: String,
+    pub google: GoogleAuthSettings,
 }
 
 impl Settings {
