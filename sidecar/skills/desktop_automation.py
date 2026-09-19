@@ -5,6 +5,7 @@ from typing import Any
 
 from skills.skill_base import SkillBase, SkillResult
 from automation.orchestrator import get_automation_orchestrator
+from automation.policy import load_automation_policy
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +50,12 @@ class DesktopAutomationFindWindowSkill(SkillBase):
             return SkillResult.failure("At least one of title, class_name, or process_name is required")
 
         try:
+            policy = load_automation_policy()
+            if not policy["automation_enabled"]:
+                return SkillResult.failure("Automation is disabled in settings")
             orchestrator = get_automation_orchestrator()
             if not orchestrator.desktop_active:
-                # Get OCR setting from settings
-                from automation.desktop import get_desktop_automation
-                # We'll start desktop with default settings; OCR can be enabled later
-                orchestrator.start_desktop(ocr_enabled=False)
+                orchestrator.start_desktop(ocr_enabled=policy["ocr_enabled"])
 
             result = orchestrator.execute_desktop_action("find_window", title=title, class_name=class_name, process_name=process_name)
             if result.get("success"):
@@ -528,6 +529,9 @@ class DesktopAutomationListWindowsSkill(SkillBase):
 
     async def execute(self, **kwargs: Any) -> SkillResult:
         try:
+            policy = load_automation_policy()
+            if not policy["automation_enabled"]:
+                return SkillResult.failure("Automation is disabled in settings")
             orchestrator = get_automation_orchestrator()
             if not orchestrator.desktop_active:
                 # Can still list windows without an active session

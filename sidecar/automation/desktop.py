@@ -2,6 +2,7 @@
 
 import base64
 import logging
+import subprocess
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -105,16 +106,27 @@ class DesktopAutomation:
             return {"success": False, "error": "pywinauto not available. Install with: pip install pywinauto"}
 
         try:
-            # Build search criteria
+            # Build search criteria.
             criteria = {}
             if title:
                 criteria["title_re"] = title
             if class_name:
                 criteria["class_name"] = class_name
             if process_name:
-                criteria["process"] = process_name
+                process_ids = self._resolve_process_ids(process_name)
+                if not process_ids:
+                    return {"success": False, "error": f"No process found matching name: {process_name}"}
+                criteria["process"] = process_ids[0]
 
-            windows = Desktop(backend="uia").windows(**criteria)
+            if not criteria:
+                return {"success": False, "error": "Window selection criteria cannot be empty; provide title, class_name, or process_name."}
+
+            if process_name and len(process_ids) > 1:
+                windows = []
+                for process_id in process_ids:
+                    windows.extend(Desktop(backend="uia").windows(**{**criteria, "process": process_id}))
+            else:
+                windows = Desktop(backend="uia").windows(**criteria)
             if not windows:
                 return {"success": False, "error": f"No window found matching criteria: {criteria}"}
 
@@ -146,6 +158,22 @@ class DesktopAutomation:
         except Exception as e:
             logger.error(f"Error finding window: {e}")
             return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _resolve_process_ids(process_name: str) -> list[int]:
+        """Resolve an executable name to process IDs accepted by pywinauto."""
+        result = subprocess.run(
+            ["tasklist", "/FI", f"IMAGENAME eq {process_name}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        process_ids = []
+        for line in result.stdout.splitlines():
+            fields = [field.strip('"') for field in line.split('","')]
+            if len(fields) >= 2 and fields[1].isdigit():
+                process_ids.append(int(fields[1]))
+        return process_ids
 
     def focus_window(self, handle: int = None) -> dict[str, Any]:
         """Focus a window by handle (or current window if not specified)."""
@@ -294,7 +322,14 @@ class DesktopAutomation:
                 return {"success": False, "error": f"Element not found: {criteria}"}
 
             element.set_focus()
-            element.type_keys(text, with_spaces=True)
+            set_edit_text = getattr(element, "set_edit_text", None)
+            if callable(set_edit_text):
+                set_edit_text(text)
+            else:
+                escaped_text = text
+                for token in ("%", "+", "^", "~", "(", ")", "{", "}"):
+                    escaped_text = escaped_text.replace(token, "{" + token + "}")
+                element.type_keys(escaped_text, with_spaces=True)
             return {"success": True, "method": "pywinauto", "text": text}
 
         except ElementNotFoundError:
@@ -410,9 +445,11 @@ class DesktopAutomation:
             except ImportError:
                 return {"success": False, "error": "pywin32 not available. Install with: pip install pywin32"}
 
-            if width and height:
-                rect = win32gui.GetWindowRect(hwnd)
-                win32gui.SetWindowPos(hwnd, win32con.HWND_TOP, rect[0], rect[1], width, height, win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
+            if width is None or height is None or width <= 0 or height <= 0:
+                return {"success": False, "error": "Window width and height must be positive"}
+
+            rect = win32gui.GetWindowRect(hwnd)
+            win32gui.SetWindowPos(hwnd, win32con.HWND_TOP, rect[0], rect[1], width, height, win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
             return {"success": True, "handle": hwnd, "width": width, "height": height}
 
         except Exception as e:

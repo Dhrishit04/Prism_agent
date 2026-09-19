@@ -1,10 +1,13 @@
 """Unified automation orchestrator for Prism."""
 
 from enum import Enum
+import threading
 from typing import Any
+from automation.policy import load_automation_policy
 
 
 class AutomationMode(Enum):
+    INACTIVE = "inactive"
     WEB = "web"
     DESKTOP = "desktop"
     OFFICE = "office"
@@ -17,6 +20,7 @@ class AutomationOrchestrator:
         self.web_automation: Any = None
         self.desktop_automation: Any = None
         self.mode: AutomationMode = AutomationMode.WEB
+        self._desktop_lock = threading.RLock()
 
     async def start_web(self, headless: bool = True, timeout: int = 30000):
         """Start web automation session."""
@@ -62,44 +66,52 @@ class AutomationOrchestrator:
     def start_desktop(self, ocr_enabled: bool = False):
         """Start desktop automation session."""
         from automation.desktop import DesktopAutomation
-        self.desktop_automation = DesktopAutomation(ocr_enabled=ocr_enabled)
-        self.mode = AutomationMode.DESKTOP
+        with self._desktop_lock:
+            self.desktop_automation = DesktopAutomation(ocr_enabled=ocr_enabled)
+            self.mode = AutomationMode.DESKTOP
 
     def stop_desktop(self):
         """Stop desktop automation session."""
-        if self.desktop_automation:
-            self.desktop_automation.close()
-            self.desktop_automation = None
+        with self._desktop_lock:
+            if self.desktop_automation:
+                self.desktop_automation.close()
+                self.desktop_automation = None
+            self.mode = AutomationMode.WEB if self.web_active else AutomationMode.INACTIVE
 
     def execute_desktop_action(self, action: str, **kwargs) -> dict[str, Any]:
         """Execute desktop automation action."""
-        if not self.desktop_automation:
-            return {"success": False, "error": "Desktop automation not started. Call start_desktop first."}
+        with self._desktop_lock:
+            policy = load_automation_policy()
+            if not policy["automation_enabled"]:
+                return {"success": False, "error": "Automation is disabled in settings"}
+            if action == "ocr" and not policy["ocr_enabled"]:
+                return {"success": False, "error": "OCR is disabled in settings"}
+            if not self.desktop_automation:
+                return {"success": False, "error": "Desktop automation not started. Call start_desktop first."}
 
-        actions = {
-            "find_window": self.desktop_automation.find_window,
-            "focus_window": self.desktop_automation.focus_window,
-            "get_ui_elements": self.desktop_automation.get_ui_elements,
-            "click": self.desktop_automation.click_element,
-            "type": self.desktop_automation.type_text,
-            "get_text": self.desktop_automation.get_element_text,
-            "screenshot": self.desktop_automation.screenshot,
-            "ocr": self.desktop_automation.ocr,
-            "resize_window": self.desktop_automation.resize_window,
-            "list_windows": self.desktop_automation.list_windows,
-        }
+            actions = {
+                "find_window": self.desktop_automation.find_window,
+                "focus_window": self.desktop_automation.focus_window,
+                "get_ui_elements": self.desktop_automation.get_ui_elements,
+                "click": self.desktop_automation.click_element,
+                "type": self.desktop_automation.type_text,
+                "get_text": self.desktop_automation.get_element_text,
+                "screenshot": self.desktop_automation.screenshot,
+                "ocr": self.desktop_automation.ocr,
+                "resize_window": self.desktop_automation.resize_window,
+                "list_windows": self.desktop_automation.list_windows,
+            }
 
-        if action not in actions:
-            return {"success": False, "error": f"Unknown desktop action: {action}"}
+            if action not in actions:
+                return {"success": False, "error": f"Unknown desktop action: {action}"}
 
-        try:
-            result = actions[action](**kwargs)
-            # Wrap successful results in standard format
-            if isinstance(result, dict) and "success" not in result:
-                return {"success": True, **result}
-            return result
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            try:
+                result = actions[action](**kwargs)
+                if isinstance(result, dict) and "success" not in result:
+                    return {"success": True, **result}
+                return result
+            except Exception as e:
+                return {"success": False, "error": str(e)}
 
     @property
     def web_active(self) -> bool:

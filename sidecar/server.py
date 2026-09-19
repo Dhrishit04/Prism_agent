@@ -15,6 +15,7 @@ from voice.wake_word import VOICE_DEPS_AVAILABLE
 from auth.google_oauth import get_google_oauth_manager
 from automation.orchestrator import AutomationOrchestrator, get_automation_orchestrator, AutomationMode
 from automation.browser import WebAutomation
+from automation.policy import load_automation_policy
 
 logger = logging.getLogger(__name__)
 
@@ -1001,7 +1002,9 @@ def desktop_list_windows():
     """List all visible windows."""
     orchestrator = get_automation_orchestrator()
     if not orchestrator.desktop_active:
-        # Can still list without active session
+        policy = load_automation_policy()
+        if not policy["automation_enabled"]:
+            return {"success": False, "error": "Automation is disabled in settings"}
         from automation.desktop import get_desktop_automation
         da = get_desktop_automation()
         result = da.list_windows()
