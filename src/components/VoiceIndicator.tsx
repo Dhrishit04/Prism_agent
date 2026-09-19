@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   getVoiceStatus,
-  startWakeWord,
-  stopWakeWord,
   startSttRecording,
   stopSttRecording,
   stopTts,

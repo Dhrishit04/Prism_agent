@@ -106,27 +106,27 @@ class SkillRegistry:
         """Get all skills as OpenAI-compatible tool definitions."""
         return [skill.to_tool_definition() for skill in self._skills.values()]
 
-    async def execute_skill(self, name: str, **kwargs: Any) -> Any:
+    async def execute_skill(self, skill_name: str, **kwargs: Any) -> Any:
         """Execute a skill by name with the given parameters.
 
         Args:
-            name: Skill name
+            skill_name: Skill name
             **kwargs: Parameters for the skill
 
         Returns:
             SkillResult from the skill execution
         """
-        skill = self.get_skill(name)
+        skill = self.get_skill(skill_name)
         if not skill:
             from skills.skill_base import SkillResult
 
-            return SkillResult.failure(f"Skill '{name}' not found")
+            return SkillResult.failure(f"Skill '{skill_name}' not found")
 
         try:
             result = await skill.execute(**kwargs)
             return result
         except Exception as e:
-            logger.error(f"Error executing skill '{name}': {e}")
+            logger.error(f"Error executing skill '{skill_name}': {e}")
             from skills.skill_base import SkillResult
 
             return SkillResult.failure(f"Skill execution error: {e}")

@@ -1,0 +1,574 @@
+"""Desktop automation skills for Prism - find_window, click, type, get_elements, screenshot, ocr."""
+
+import logging
+from typing import Any
+
+from skills.skill_base import SkillBase, SkillResult
+from automation.orchestrator import get_automation_orchestrator
+
+logger = logging.getLogger(__name__)
+
+
+class DesktopAutomationFindWindowSkill(SkillBase):
+    """Skill to find and activate a window by title, class, or process name."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.find_window"
+
+    @property
+    def description(self) -> str:
+        return "Find and activate a window by title, class name, or process name. Starts desktop automation session if not already running."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Window title to search for (supports partial match/regex)",
+                },
+                "class_name": {
+                    "type": "string",
+                    "description": "Window class name to search for",
+                },
+                "process_name": {
+                    "type": "string",
+                    "description": "Process name to search for (e.g., 'notepad.exe')",
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        title = kwargs.get("title", "")
+        class_name = kwargs.get("class_name")
+        process_name = kwargs.get("process_name")
+
+        if not title and not class_name and not process_name:
+            return SkillResult.failure("At least one of title, class_name, or process_name is required")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                # Get OCR setting from settings
+                from automation.desktop import get_desktop_automation
+                # We'll start desktop with default settings; OCR can be enabled later
+                orchestrator.start_desktop(ocr_enabled=False)
+
+            result = orchestrator.execute_desktop_action("find_window", title=title, class_name=class_name, process_name=process_name)
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Find window failed"))
+        except Exception as e:
+            logger.error(f"Error finding window: {e}")
+            return SkillResult.failure(f"Error finding window: {e}")
+
+
+class DesktopAutomationFocusWindowSkill(SkillBase):
+    """Skill to focus a window by handle."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.focus_window"
+
+    @property
+    def description(self) -> str:
+        return "Focus a window by its handle (HWND)."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "handle": {
+                    "type": "integer",
+                    "description": "Window handle (HWND) to focus. If not provided, focuses the current window.",
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        handle = kwargs.get("handle")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action("focus_window", handle=handle)
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Focus window failed"))
+        except Exception as e:
+            logger.error(f"Error focusing window: {e}")
+            return SkillResult.failure(f"Error focusing window: {e}")
+
+
+class DesktopAutomationGetElementsSkill(SkillBase):
+    """Skill to get the accessibility tree for the current window."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.get_elements"
+
+    @property
+    def description(self) -> str:
+        return "Get the UI accessibility tree for the current window (up to specified depth)."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "max_depth": {
+                    "type": "integer",
+                    "description": "Maximum depth of the element tree (default: 3)",
+                    "default": 3,
+                },
+                "include_children": {
+                    "type": "boolean",
+                    "description": "Whether to include child elements (default: true)",
+                    "default": True,
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        max_depth = kwargs.get("max_depth", 3)
+        include_children = kwargs.get("include_children", True)
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action("get_ui_elements", max_depth=max_depth, include_children=include_children)
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Get elements failed"))
+        except Exception as e:
+            logger.error(f"Error getting UI elements: {e}")
+            return SkillResult.failure(f"Error getting UI elements: {e}")
+
+
+class DesktopAutomationClickSkill(SkillBase):
+    """Skill to click a UI element by name, type, automation_id, or coordinates."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.click"
+
+    @property
+    def description(self) -> str:
+        return "Click a UI element by name, control type, automation ID, or screen coordinates."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name/title of the element to click",
+                },
+                "control_type": {
+                    "type": "string",
+                    "description": "Control type of the element (e.g., 'Button', 'Edit', 'ComboBox')",
+                },
+                "automation_id": {
+                    "type": "string",
+                    "description": "Automation ID of the element",
+                },
+                "coordinates": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "Screen coordinates [x, y] to click (fallback to PyAutoGUI)",
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        name = kwargs.get("name")
+        control_type = kwargs.get("control_type")
+        automation_id = kwargs.get("automation_id")
+        coordinates = kwargs.get("coordinates")
+
+        if not name and not control_type and not automation_id and not coordinates:
+            return SkillResult.failure("At least one search criterion (name, control_type, automation_id) or coordinates is required")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action(
+                "click",
+                name=name,
+                control_type=control_type,
+                automation_id=automation_id,
+                coordinates=tuple(coordinates) if coordinates else None,
+            )
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Click failed"))
+        except Exception as e:
+            logger.error(f"Error clicking element: {e}")
+            return SkillResult.failure(f"Error clicking element: {e}")
+
+
+class DesktopAutomationTypeSkill(SkillBase):
+    """Skill to type text into a UI element."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.type"
+
+    @property
+    def description(self) -> str:
+        return "Type text into a UI element by name, control type, automation ID, or at screen coordinates."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Text to type",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Name/title of the element to type into",
+                },
+                "control_type": {
+                    "type": "string",
+                    "description": "Control type of the element (e.g., 'Edit', 'Text')",
+                },
+                "automation_id": {
+                    "type": "string",
+                    "description": "Automation ID of the element",
+                },
+                "coordinates": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "Screen coordinates [x, y] to click before typing (fallback to PyAutoGUI)",
+                },
+            },
+            "required": ["text"],
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        text = kwargs.get("text", "")
+        name = kwargs.get("name")
+        control_type = kwargs.get("control_type")
+        automation_id = kwargs.get("automation_id")
+        coordinates = kwargs.get("coordinates")
+
+        if not text:
+            return SkillResult.failure("text is required")
+
+        if not name and not control_type and not automation_id and not coordinates:
+            return SkillResult.failure("At least one search criterion (name, control_type, automation_id) or coordinates is required")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action(
+                "type",
+                text=text,
+                name=name,
+                control_type=control_type,
+                automation_id=automation_id,
+                coordinates=tuple(coordinates) if coordinates else None,
+            )
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Type failed"))
+        except Exception as e:
+            logger.error(f"Error typing text: {e}")
+            return SkillResult.failure(f"Error typing text: {e}")
+
+
+class DesktopAutomationGetTextSkill(SkillBase):
+    """Skill to get text from a UI element."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.get_text"
+
+    @property
+    def description(self) -> str:
+        return "Get text content from a UI element by name, control type, or automation ID."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name/title of the element",
+                },
+                "control_type": {
+                    "type": "string",
+                    "description": "Control type of the element (e.g., 'Text', 'Edit', 'Static')",
+                },
+                "automation_id": {
+                    "type": "string",
+                    "description": "Automation ID of the element",
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        name = kwargs.get("name")
+        control_type = kwargs.get("control_type")
+        automation_id = kwargs.get("automation_id")
+
+        if not name and not control_type and not automation_id:
+            return SkillResult.failure("At least one search criterion (name, control_type, automation_id) is required")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action(
+                "get_text",
+                name=name,
+                control_type=control_type,
+                automation_id=automation_id,
+            )
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Get text failed"))
+        except Exception as e:
+            logger.error(f"Error getting element text: {e}")
+            return SkillResult.failure(f"Error getting element text: {e}")
+
+
+class DesktopAutomationScreenshotSkill(SkillBase):
+    """Skill to take a screenshot of the screen, window, or region."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.screenshot"
+
+    @property
+    def description(self) -> str:
+        return "Take a screenshot of the screen, current window, or a specific region. Returns base64 encoded PNG."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "region": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "Region to capture as [left, top, right, bottom]",
+                },
+                "full_screen": {
+                    "type": "boolean",
+                    "description": "Capture full screen (default: false)",
+                    "default": False,
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        region = kwargs.get("region")
+        full_screen = kwargs.get("full_screen", False)
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action("screenshot", region=tuple(region) if region else None, full_screen=full_screen)
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Screenshot failed"))
+        except Exception as e:
+            logger.error(f"Error taking screenshot: {e}")
+            return SkillResult.failure(f"Error taking screenshot: {e}")
+
+
+class DesktopAutomationOCRSkill(SkillBase):
+    """Skill to extract text from screen region using OCR."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.ocr"
+
+    @property
+    def description(self) -> str:
+        return "Extract text from a screen region using Tesseract OCR. Requires OCR to be enabled in settings."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "region": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "Region to OCR as [left, top, right, bottom]",
+                },
+                "image_base64": {
+                    "type": "string",
+                    "description": "Base64 encoded image to OCR (alternative to region)",
+                },
+            },
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        region = kwargs.get("region")
+        image_base64 = kwargs.get("image_base64")
+
+        if not region and not image_base64:
+            return SkillResult.failure("Either region or image_base64 is required")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action("ocr", region=tuple(region) if region else None, image_base64=image_base64)
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "OCR failed"))
+        except Exception as e:
+            logger.error(f"Error running OCR: {e}")
+            return SkillResult.failure(f"Error running OCR: {e}")
+
+
+class DesktopAutomationResizeWindowSkill(SkillBase):
+    """Skill to resize a window."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.resize_window"
+
+    @property
+    def description(self) -> str:
+        return "Resize the current window or a window by handle."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "width": {
+                    "type": "integer",
+                    "description": "New width in pixels",
+                },
+                "height": {
+                    "type": "integer",
+                    "description": "New height in pixels",
+                },
+                "handle": {
+                    "type": "integer",
+                    "description": "Window handle (HWND). If not provided, resizes current window.",
+                },
+            },
+            "required": ["width", "height"],
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        width = kwargs.get("width")
+        height = kwargs.get("height")
+        handle = kwargs.get("handle")
+
+        if width is None or height is None:
+            return SkillResult.failure("width and height are required")
+
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                return SkillResult.failure("Desktop automation not started. Call desktop_automation.find_window first.")
+
+            result = orchestrator.execute_desktop_action("resize_window", handle=handle, width=width, height=height)
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "Resize window failed"))
+        except Exception as e:
+            logger.error(f"Error resizing window: {e}")
+            return SkillResult.failure(f"Error resizing window: {e}")
+
+
+class DesktopAutomationListWindowsSkill(SkillBase):
+    """Skill to list all visible windows."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.list_windows"
+
+    @property
+    def description(self) -> str:
+        return "List all visible windows with their titles, class names, and process IDs."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {},
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        try:
+            orchestrator = get_automation_orchestrator()
+            if not orchestrator.desktop_active:
+                # Can still list windows without an active session
+                from automation.desktop import get_desktop_automation
+                da = get_desktop_automation()
+                result = da.list_windows()
+            else:
+                result = orchestrator.execute_desktop_action("list_windows")
+
+            if result.get("success"):
+                return SkillResult.success(result)
+            return SkillResult.failure(result.get("error", "List windows failed"))
+        except Exception as e:
+            logger.error(f"Error listing windows: {e}")
+            return SkillResult.failure(f"Error listing windows: {e}")
+
+
+class DesktopAutomationCloseSkill(SkillBase):
+    """Skill to close the desktop automation session."""
+
+    @property
+    def name(self) -> str:
+        return "desktop_automation.close"
+
+    @property
+    def description(self) -> str:
+        return "Close the desktop automation session and cleanup resources."
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {},
+        }
+
+    async def execute(self, **kwargs: Any) -> SkillResult:
+        try:
+            orchestrator = get_automation_orchestrator()
+            if orchestrator.desktop_active:
+                orchestrator.stop_desktop()
+            return SkillResult.success({"status": "closed"})
+        except Exception as e:
+            logger.error(f"Error closing desktop automation: {e}")
+            return SkillResult.failure(f"Error closing desktop automation: {e}")

@@ -26,6 +26,10 @@ google = [
 ]
 automation = [
     "playwright>=1.40.0",
+    "pywinauto>=0.6.8",
+    "pyautogui>=0.9.54",
+    "pytesseract>=0.3.10",
+    "pillow>=10.0.0",
 ]
 
 [tool.setuptools.packages.find]

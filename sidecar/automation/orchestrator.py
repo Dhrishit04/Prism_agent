@@ -15,6 +15,7 @@ class AutomationOrchestrator:
 
     def __init__(self):
         self.web_automation: Any = None
+        self.desktop_automation: Any = None
         self.mode: AutomationMode = AutomationMode.WEB
 
     async def start_web(self, headless: bool = True, timeout: int = 30000):
@@ -58,14 +59,77 @@ class AutomationOrchestrator:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def start_desktop(self, ocr_enabled: bool = False):
+        """Start desktop automation session."""
+        from automation.desktop import DesktopAutomation
+        self.desktop_automation = DesktopAutomation(ocr_enabled=ocr_enabled)
+        self.mode = AutomationMode.DESKTOP
+
+    def stop_desktop(self):
+        """Stop desktop automation session."""
+        if self.desktop_automation:
+            self.desktop_automation.close()
+            self.desktop_automation = None
+
+    def execute_desktop_action(self, action: str, **kwargs) -> dict[str, Any]:
+        """Execute desktop automation action."""
+        if not self.desktop_automation:
+            return {"success": False, "error": "Desktop automation not started. Call start_desktop first."}
+
+        actions = {
+            "find_window": self.desktop_automation.find_window,
+            "focus_window": self.desktop_automation.focus_window,
+            "get_ui_elements": self.desktop_automation.get_ui_elements,
+            "click": self.desktop_automation.click_element,
+            "type": self.desktop_automation.type_text,
+            "get_text": self.desktop_automation.get_element_text,
+            "screenshot": self.desktop_automation.screenshot,
+            "ocr": self.desktop_automation.ocr,
+            "resize_window": self.desktop_automation.resize_window,
+            "list_windows": self.desktop_automation.list_windows,
+        }
+
+        if action not in actions:
+            return {"success": False, "error": f"Unknown desktop action: {action}"}
+
+        try:
+            result = actions[action](**kwargs)
+            # Wrap successful results in standard format
+            if isinstance(result, dict) and "success" not in result:
+                return {"success": True, **result}
+            return result
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     @property
     def web_active(self) -> bool:
         """Check if web automation is active."""
         return self.web_automation is not None
 
+    @property
+    def desktop_active(self) -> bool:
+        """Check if desktop automation is active."""
+        return self.desktop_automation is not None
+
     def get_status(self) -> dict[str, Any]:
         """Get automation status."""
-        return {
+        status = {
             "mode": self.mode.value,
             "web_active": self.web_active,
+            "desktop_active": self.desktop_active,
         }
+        if self.desktop_automation:
+            status["desktop"] = self.desktop_automation.get_status()
+        return status
+
+
+# Global orchestrator instance
+_automation_orchestrator: AutomationOrchestrator = None
+
+
+def get_automation_orchestrator() -> AutomationOrchestrator:
+    """Get or create the global automation orchestrator."""
+    global _automation_orchestrator
+    if _automation_orchestrator is None:
+        _automation_orchestrator = AutomationOrchestrator()
+    return _automation_orchestrator

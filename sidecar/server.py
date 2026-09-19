@@ -13,7 +13,7 @@ from skills.skill_base import SkillResult
 from voice import get_wake_word_skill, get_stt_skill, get_tts_skill, get_pipeline
 from voice.wake_word import VOICE_DEPS_AVAILABLE
 from auth.google_oauth import get_google_oauth_manager
-from automation.orchestrator import AutomationOrchestrator
+from automation.orchestrator import AutomationOrchestrator, get_automation_orchestrator, AutomationMode
 from automation.browser import WebAutomation
 
 logger = logging.getLogger(__name__)
@@ -536,16 +536,6 @@ async def voice_pipeline_status():
 
 # --- Automation Orchestrator Initialization ---
 
-_automation_orchestrator: Optional[AutomationOrchestrator] = None
-
-
-def get_automation_orchestrator() -> AutomationOrchestrator:
-    """Get or create the global automation orchestrator."""
-    global _automation_orchestrator
-    if _automation_orchestrator is None:
-        _automation_orchestrator = AutomationOrchestrator()
-    return _automation_orchestrator
-
 
 @app.on_event("startup")
 async def init_automation():
@@ -559,7 +549,7 @@ async def init_automation():
 
     orchestrator = get_automation_orchestrator()
     # Pre-configure with settings
-    orchestrator.mode = AutomationOrchestrator.AutomationMode.WEB
+    orchestrator.mode = AutomationMode.WEB
     logger.info("Automation orchestrator initialized")
 
 
@@ -758,6 +748,271 @@ async def update_automation_settings(request: dict):
         json.dump(settings, f, indent=2)
 
     return {"success": True, "settings": settings["automation"]}
+
+
+# --- Desktop Automation API Endpoints ---
+
+class DesktopFindWindowRequest(BaseModel):
+    title: str = ""
+    class_name: str = ""
+    process_name: str = ""
+
+
+class DesktopFocusWindowRequest(BaseModel):
+    handle: int = None
+
+
+class DesktopGetElementsRequest(BaseModel):
+    max_depth: int = 3
+    include_children: bool = True
+
+
+class DesktopClickRequest(BaseModel):
+    name: str = ""
+    control_type: str = ""
+    automation_id: str = ""
+    coordinates: list[int] = None
+
+
+class DesktopTypeRequest(BaseModel):
+    text: str
+    name: str = ""
+    control_type: str = ""
+    automation_id: str = ""
+    coordinates: list[int] = None
+
+
+class DesktopGetTextRequest(BaseModel):
+    name: str = ""
+    control_type: str = ""
+    automation_id: str = ""
+
+
+class DesktopScreenshotRequest(BaseModel):
+    region: list[int] = None
+    full_screen: bool = False
+
+
+class DesktopOCRRequest(BaseModel):
+    region: list[int] = None
+    image_base64: str = ""
+
+
+class DesktopResizeWindowRequest(BaseModel):
+    width: int
+    height: int
+    handle: int = None
+
+
+@app.post("/automation/desktop/start")
+async def start_desktop_automation():
+    """Start desktop automation session."""
+    settings = load_settings()
+    automation_settings = settings.get("automation", {})
+
+    if not automation_settings.get("automation_enabled", False):
+        return {"success": False, "error": "Automation is disabled in settings"}
+
+    orchestrator = get_automation_orchestrator()
+    ocr_enabled = automation_settings.get("ocr_enabled", False)
+
+    try:
+        orchestrator.start_desktop(ocr_enabled=ocr_enabled)
+        return {"success": True, "data": {"mode": "desktop", "ocr_enabled": ocr_enabled}}
+    except Exception as e:
+        logger.error(f"Error starting desktop automation: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/stop")
+async def stop_desktop_automation():
+    """Stop desktop automation session."""
+    orchestrator = get_automation_orchestrator()
+    try:
+        orchestrator.stop_desktop()
+        return {"success": True, "data": {"status": "stopped"}}
+    except Exception as e:
+        logger.error(f"Error stopping desktop automation: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/automation/desktop/status")
+def desktop_automation_status():
+    """Get desktop automation status."""
+    orchestrator = get_automation_orchestrator()
+    return orchestrator.get_status()
+
+
+@app.post("/automation/desktop/find-window")
+def desktop_find_window(request: DesktopFindWindowRequest):
+    """Find and activate a window."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started. Call /automation/desktop/start first."}
+
+    try:
+        result = orchestrator.execute_desktop_action("find_window", title=request.title, class_name=request.class_name, process_name=request.process_name)
+        return result
+    except Exception as e:
+        logger.error(f"Error finding window: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/focus-window")
+def desktop_focus_window(request: DesktopFocusWindowRequest):
+    """Focus a window by handle."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action("focus_window", handle=request.handle)
+        return result
+    except Exception as e:
+        logger.error(f"Error focusing window: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/elements")
+def desktop_get_elements(request: DesktopGetElementsRequest):
+    """Get UI elements from current window."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action("get_ui_elements", max_depth=request.max_depth, include_children=request.include_children)
+        return result
+    except Exception as e:
+        logger.error(f"Error getting UI elements: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/click")
+def desktop_click(request: DesktopClickRequest):
+    """Click a UI element."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action(
+            "click",
+            name=request.name or None,
+            control_type=request.control_type or None,
+            automation_id=request.automation_id or None,
+            coordinates=tuple(request.coordinates) if request.coordinates else None,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error clicking element: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/type")
+def desktop_type(request: DesktopTypeRequest):
+    """Type text into a UI element."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action(
+            "type",
+            text=request.text,
+            name=request.name or None,
+            control_type=request.control_type or None,
+            automation_id=request.automation_id or None,
+            coordinates=tuple(request.coordinates) if request.coordinates else None,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error typing: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/get-text")
+def desktop_get_text(request: DesktopGetTextRequest):
+    """Get text from a UI element."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action(
+            "get_text",
+            name=request.name or None,
+            control_type=request.control_type or None,
+            automation_id=request.automation_id or None,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error getting element text: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/screenshot")
+def desktop_screenshot(request: DesktopScreenshotRequest):
+    """Take a screenshot."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action("screenshot", region=tuple(request.region) if request.region else None, full_screen=request.full_screen)
+        return result
+    except Exception as e:
+        logger.error(f"Error taking screenshot: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/ocr")
+def desktop_ocr(request: DesktopOCRRequest):
+    """Extract text from screen region using OCR."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action("ocr", region=tuple(request.region) if request.region else None, image_base64=request.image_base64 or None)
+        return result
+    except Exception as e:
+        logger.error(f"Error running OCR: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/automation/desktop/resize-window")
+def desktop_resize_window(request: DesktopResizeWindowRequest):
+    """Resize a window."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        return {"success": False, "error": "Desktop automation not started."}
+
+    try:
+        result = orchestrator.execute_desktop_action("resize_window", handle=request.handle, width=request.width, height=request.height)
+        return result
+    except Exception as e:
+        logger.error(f"Error resizing window: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/automation/desktop/list-windows")
+def desktop_list_windows():
+    """List all visible windows."""
+    orchestrator = get_automation_orchestrator()
+    if not orchestrator.desktop_active:
+        # Can still list without active session
+        from automation.desktop import get_desktop_automation
+        da = get_desktop_automation()
+        result = da.list_windows()
+        return result
+
+    try:
+        result = orchestrator.execute_desktop_action("list_windows")
+        return result
+    except Exception as e:
+        logger.error(f"Error listing windows: {e}")
+        return {"success": False, "error": str(e)}
 
 
 # --- Google OAuth Endpoints ---
