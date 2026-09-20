@@ -1,10 +1,13 @@
 """Web and Desktop Automation module for Prism."""
 
 from automation.browser import WebAutomation
+from automation.office import OfficeAutomation, get_office_automation
 from automation.orchestrator import AutomationOrchestrator, get_automation_orchestrator
 
 __all__ = [
     "WebAutomation",
+    "OfficeAutomation",
+    "get_office_automation",
     "DesktopAutomation",
     "get_desktop_automation",
     "reset_desktop_automation",

@@ -15,6 +15,7 @@ from voice.wake_word import VOICE_DEPS_AVAILABLE
 from auth.google_oauth import get_google_oauth_manager
 from automation.orchestrator import AutomationOrchestrator, get_automation_orchestrator, AutomationMode
 from automation.browser import WebAutomation
+from automation.office import get_office_automation
 from automation.policy import load_automation_policy
 
 logger = logging.getLogger(__name__)
@@ -583,6 +584,76 @@ class WebScreenshotRequest(BaseModel):
 class WebWaitRequest(BaseModel):
     selector: str
     state: str = "visible"
+
+
+class OfficeReadDocumentRequest(BaseModel):
+    path: str
+
+
+class OfficeEditDocumentRequest(BaseModel):
+    path: str
+    edits: list[dict] = []
+
+
+class OfficeCreatePivotRequest(BaseModel):
+    csv_path: str
+    config: dict = {}
+
+
+class OfficeReadExcelRequest(BaseModel):
+    path: str
+
+
+def get_office_engine():
+    """Get the Office engine configured by the user's automation settings."""
+    settings = load_settings()
+    automation = settings.get("automation", {})
+    if not automation.get("automation_enabled", False):
+        raise RuntimeError("Automation is disabled in settings")
+    return get_office_automation(
+        bool(automation.get("office_use_com", False)),
+        automation.get("office_root"),
+    )
+
+
+@app.post("/automation/office/read-doc")
+def office_read_doc(request: OfficeReadDocumentRequest):
+    """Read a Word document."""
+    try:
+        return {"success": True, "data": get_office_engine().read_doc(request.path)}
+    except Exception as exc:
+        logger.error("Error reading Word document: %s", exc)
+        return {"success": False, "error": str(exc)}
+
+
+@app.post("/automation/office/edit-doc")
+def office_edit_doc(request: OfficeEditDocumentRequest):
+    """Apply edits to a Word document."""
+    try:
+        return {"success": True, "data": get_office_engine().edit_doc(request.path, request.edits)}
+    except Exception as exc:
+        logger.error("Error editing Word document: %s", exc)
+        return {"success": False, "error": str(exc)}
+
+
+@app.post("/automation/office/create-pivot")
+def office_create_pivot(request: OfficeCreatePivotRequest):
+    """Create an Excel pivot workbook from CSV data."""
+    try:
+        return {"success": True, "data": get_office_engine().create_pivot(request.csv_path, request.config)}
+    except Exception as exc:
+        logger.error("Error creating pivot table: %s", exc)
+        return {"success": False, "error": str(exc)}
+
+
+@app.post("/automation/office/read-excel")
+def office_read_excel(request: OfficeReadExcelRequest):
+    """Read Excel workbook worksheets and rows."""
+    try:
+        return {"success": True, "data": get_office_engine().read_excel(request.path)}
+    except Exception as exc:
+        logger.error("Error reading Excel workbook: %s", exc)
+        return {"success": False, "error": str(exc)}
 
 
 @app.post("/automation/web/start")
