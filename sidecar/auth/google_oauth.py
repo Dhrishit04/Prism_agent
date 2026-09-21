@@ -1,4 +1,4 @@
-"""Google OAuth 2.0 authentication manager for Prism.
+"""Google OAuth 2.0 authentication manager for Tesseract.
 
 Handles OAuth flow, token storage with AES-256 encryption, and refresh token flow.
 """
@@ -34,7 +34,7 @@ ALL_SCOPES = GMAIL_SCOPES + CALENDAR_SCOPES
 REDIRECT_URI = "http://localhost:8765/oauth/callback"
 
 # Token storage path
-TOKENS_DIR = Path.home() / ".prism" / "tokens"
+TOKENS_DIR = Path.home() / ".tesseract" / "tokens"
 TOKEN_FILE = TOKENS_DIR / "google_tokens.enc"
 KEY_FILE = TOKENS_DIR / "encryption_key"
 
@@ -54,7 +54,7 @@ class OAuthStatus:
 
 
 class GoogleOAuthManager:
-    """Manages Google OAuth 2.0 authentication for Prism."""
+    """Manages Google OAuth 2.0 authentication for Tesseract."""
 
     def __init__(self):
         self._credentials: Optional[Credentials] = None

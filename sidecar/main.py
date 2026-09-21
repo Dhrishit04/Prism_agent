@@ -1,4 +1,4 @@
-"""Prism sidecar entry point — runs the FastAPI server."""
+"""Tesseract sidecar entry point - runs the FastAPI server."""
 
 import uvicorn
 from server import app

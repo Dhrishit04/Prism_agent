@@ -1,7 +1,7 @@
 {
-  "productName": "Prism",
+  "productName": "Tesseract",
   "version": "0.1.0",
-  "identifier": "com.prism.agent",
+  "identifier": "com.tesseract.agent",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Prism AI Agent",
+        "title": "Tesseract AI Agent",
         "width": 900,
         "height": 600,
         "minWidth": 600,

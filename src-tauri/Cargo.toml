@@ -1,12 +1,12 @@
 [package]
-name = "prism"
+name = "tesseract"
 version = "0.1.0"
-description = "Prism AI Agent - A Jarvis-like AI desktop assistant"
-authors = ["Prism"]
+description = "Tesseract AI Agent - A Jarvis-like AI desktop assistant"
+authors = ["Tesseract"]
 edition = "2021"
 
 [lib]
-name = "prism_lib"
+name = "tesseract_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

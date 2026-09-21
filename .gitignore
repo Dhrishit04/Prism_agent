@@ -7,9 +7,13 @@ target/
 sidecar/.venv/
 sidecar/__pycache__/
 sidecar/**/__pycache__/
+sidecar/build/
+sidecar/dist/
+sidecar/*.spec
+sidecar/tesseract_sidecar.egg-info/
 sidecar/prism_sidecar.egg-info/
 sidecar/*.log
-~/.prism/
+~/.tesseract/
 msys2/
 *.msi
 *.exe

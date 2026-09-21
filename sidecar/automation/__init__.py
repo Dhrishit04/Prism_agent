@@ -1,4 +1,4 @@
-"""Web and Desktop Automation module for Prism."""
+"""Web and Desktop Automation module for Tesseract."""
 
 from automation.browser import WebAutomation
 from automation.office import OfficeAutomation, get_office_automation

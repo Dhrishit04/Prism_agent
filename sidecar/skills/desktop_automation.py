@@ -1,4 +1,4 @@
-"""Desktop automation skills for Prism - find_window, click, type, get_elements, screenshot, ocr."""
+"""Desktop automation skills for Tesseract - find_window, click, type, get_elements, screenshot, ocr."""
 
 import logging
 from typing import Any

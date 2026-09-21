@@ -1,4 +1,4 @@
-"""Gmail skills for Prism - read, send, search, and manage emails."""
+"""Gmail skills for Tesseract - read, send, search, and manage emails."""
 
 import base64
 import logging

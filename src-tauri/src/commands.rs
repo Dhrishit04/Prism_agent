@@ -6,7 +6,7 @@ pub mod voice;
 
 #[tauri::command]
 pub fn greet(name: &str) -> String {
-    format!("Hello, {}! Prism is ready.", name)
+    format!("Hello, {}! Tesseract is ready.", name)
 }
 
 #[tauri::command]

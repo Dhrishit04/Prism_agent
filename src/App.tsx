@@ -53,7 +53,7 @@ function App() {
         } transition-all duration-200 bg-prism-darker border-r border-prism-border overflow-hidden flex flex-col`}
       >
         <div className="p-4">
-          <h1 className="text-lg font-bold text-prism-accent">Prism</h1>
+          <h1 className="text-lg font-bold text-prism-accent">Tesseract</h1>
           <nav className="mt-6 space-y-2">
             <button
               onClick={() => handleNavClick("chat")}
@@ -97,7 +97,7 @@ function App() {
           >
             ☰
           </button>
-          <span className="text-sm text-prism-text-muted flex-1">Prism AI</span>
+          <span className="text-sm text-prism-text-muted flex-1">Tesseract AI</span>
           {activeView === "chat" && (
             <>
               <ModelPicker currentModel={currentModel} onModelChange={setCurrentModel} />
@@ -120,7 +120,7 @@ function App() {
               {messages.length === 0 && (
                 <div className="flex items-center justify-center h-full text-prism-text-muted">
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-prism-accent mb-2">Prism</h2>
+                    <h2 className="text-2xl font-bold text-prism-accent mb-2">Tesseract</h2>
                     <p>How can I help you today?</p>
                     <div className="mt-4 text-xs text-prism-text-muted/50">
                       Model: {currentModel}

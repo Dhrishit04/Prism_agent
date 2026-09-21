@@ -1,4 +1,4 @@
-"""Unified automation orchestrator for Prism."""
+"""Unified automation orchestrator for Tesseract."""
 
 from enum import Enum
 import threading

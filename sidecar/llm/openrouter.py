@@ -16,8 +16,8 @@ class OpenRouterClient:
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://prism.ai",
-            "X-Title": "Prism AI Agent",
+            "HTTP-Referer": "https://tesseract.ai",
+            "X-Title": "Tesseract AI Agent",
         }
 
     async def chat_stream(

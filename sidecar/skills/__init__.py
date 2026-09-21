@@ -1,6 +1,6 @@
-"""Prism Skills Package.
+"""Tesseract Skills Package.
 
-This package contains the skill system for Prism AI Agent.
+This package contains the skill system for Tesseract AI Agent.
 Skills are auto-discovered from this directory at startup.
 """
 

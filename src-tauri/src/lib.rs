@@ -56,7 +56,7 @@ pub fn run() {
 
             // Create tray icon
             let _tray = TrayIconBuilder::new()
-                .tooltip("Prism")
+                .tooltip("Tesseract")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .on_menu_event(|app, event| {

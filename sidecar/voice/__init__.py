@@ -1,4 +1,4 @@
-"""Voice pipeline modules for Prism."""
+"""Voice pipeline modules for Tesseract."""
 
 from .wake_word import WakeWordDetector, WakeWordSkill, get_wake_word_skill
 from .stt import WhisperSTT, STTSkill, get_stt_skill

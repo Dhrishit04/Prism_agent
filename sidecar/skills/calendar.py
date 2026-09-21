@@ -1,4 +1,4 @@
-"""Google Calendar skills for Prism - list, create, update, delete events and check schedule."""
+"""Google Calendar skills for Tesseract - list, create, update, delete events and check schedule."""
 
 import logging
 from datetime import datetime, timedelta

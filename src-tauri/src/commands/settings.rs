@@ -76,7 +76,7 @@ pub struct Settings {
 impl Settings {
     fn settings_path() -> PathBuf {
         let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push(".prism");
+        path.push(".tesseract");
         path.push("settings.json");
         path
     }

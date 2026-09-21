@@ -1,8 +1,8 @@
-# 🔮 Prism AI Agent
+# 🔮 Tesseract AI Agent
 
 <div align="center">
 
-![Prism Banner](https://img.shields.io/badge/Prism-AI%20Agent-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTEyIDJMMyA3djEwbDkgMTUgOS0xNVY3TDEyIDJ6IiBzdHJva2U9IiM3QzNBRUQiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik05IDEybDMgMyA1LTUiIHN0cm9rZT0iIzdDM0FFRCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=&logoColor=white)
+![Tesseract Banner](https://img.shields.io/badge/Tesseract-AI%20Agent-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTEyIDJMMyA3djEwbDkgMTUgOS0xNVY3TDEyIDJ6IiBzdHJva2U9IiM3QzNBRUQiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik05IDEybDMgMyA1LTUiIHN0cm9rZT0iIzdDM0FFRCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=&logoColor=white)
 
 ![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB?style=for-the-badge&logo=tauri&logoColor=white)
 ![React 18](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
@@ -12,7 +12,6 @@
 
 ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS-12%2B-000000?style=for-the-badge&logo=apple&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active%20Development-FF6B35?style=for-the-badge)
 
 </div>
@@ -21,7 +20,7 @@
 
 ## ✨ Overview
 
-**Prism** is a cross-platform (Windows + macOS) AI desktop assistant inspired by **J.A.R.V.I.S.** from Iron Man. It combines a native desktop shell with a Python AI/voice engine, providing **full voice interaction**, **LLM-powered reasoning via OpenRouter**, a **modular skill system**, and **full GUI automation capabilities** — the agent can control websites, desktop apps, and documents like a human would.
+**Tesseract** is a cross-platform (Windows + macOS) AI desktop assistant. It combines a native desktop shell with a Python AI/voice engine, providing **full voice interaction**, **LLM-powered reasoning via OpenRouter**, a **modular skill system**, and **full GUI automation capabilities** — the agent can control websites, desktop apps, and documents like a human would.
 
 ### 🎯 Core Philosophy
 
@@ -85,7 +84,7 @@ sequenceDiagram
     participant L as LLM (OpenRouter)
     participant T as Piper TTS
 
-    U->>P: "Hey Prism" 🎤
+    U->>P: "Hey Tesseract" 🎤
     P->>W: Wake word detected → Record
     W->>L: Transcribe → Text
     L->>T: Stream response
@@ -102,7 +101,7 @@ sequenceDiagram
 ### Model Picker & OpenRouter
 
 - **Frontend:** Dropdown fetching models from `/v1/models`
-- **Persistence:** Selected model in `~/.prism/settings.json`
+- **Persistence:** Selected model in `~/.tesseract/settings.json`
 - **Streaming:** SSE → Python → Tauri IPC → Frontend (real-time)
 - **Fallback:** Clear error + retry on OpenRouter unreachable
 
@@ -250,14 +249,14 @@ sequenceDiagram
     S->>U: "Connected!" ✅
 ```
 
-- Tokens stored at `~/.prism/tokens/` with **AES-256 encryption**
+- Tokens stored at `~/.tesseract/tokens/` with **AES-256 encryption**
 - Refresh token flow for long-lived access
 
 ---
 
 ## ⚙️ Configuration
 
-### Settings File (`~/.prism/settings.json`)
+### Settings File (`~/.tesseract/settings.json`)
 
 Following the **Claude Code pattern** — UI reads/writes JSON directly via Tauri FS API. No backend API needed.
 
@@ -273,7 +272,7 @@ Following the **Claude Code pattern** — UI reads/writes JSON directly via Taur
     "favorites": ["anthropic/claude-3.5-sonnet"]
   },
   "voice": {
-    "wake_word": "hey prism",
+    "wake_word": "hey tesseract",
     "wake_word_enabled": true,
     "stt_model": "tiny",
     "tts_voice": "default",
@@ -360,7 +359,7 @@ Following the **Claude Code pattern** — UI reads/writes JSON directly via Taur
 ## 📁 Project Structure
 
 ```
-Prism/
+Tesseract/
 ├── src-tauri/                 # 🦀 Tauri Rust Backend
 │   ├── src/
 │   │   ├── main.rs            # App entry, tray, hotkeys
@@ -426,8 +425,8 @@ Prism/
 
 ```bash
 # 1️⃣ Clone & enter
-git clone https://github.com/your-org/Prism.git
-cd Prism
+git clone https://github.com/Dhrishit04/Tesseract.git
+cd Tesseract
 
 # 2️⃣ Python sidecar (terminal 1)
 cd sidecar
@@ -460,8 +459,8 @@ PORCUPINE_ACCESS_KEY=your_picovoice_key  # for wake word
 # Build Python sidecar (PyInstaller)
 cd sidecar
 uv pip install pyinstaller
-pyinstaller --onefile --name prism-sidecar main.py
-# → dist/prism-sidecar(.exe)
+pyinstaller --onefile --name tesseract-sidecar main.py
+# → dist/tesseract-sidecar(.exe)
 
 # Build Tauri app
 cd ..
@@ -610,15 +609,15 @@ git push origin feat/amazing-feature
 - [Whisper.cpp](https://github.com/ggerganov/whisper.cpp) — Local STT
 - [Piper TTS](https://github.com/rhasspy/piper) — Local TTS
 - [Playwright](https://playwright.dev/) — Web automation
-- [All open-source contributors](https://github.com/your-org/Prism/graphs/contributors) ❤️
+- [All open-source contributors](https://github.com/Dhrishit04/Tesseract/graphs/contributors) ❤️
 
 ---
 
 <div align="center">
 
-**Made with 💜 by the Prism Team**
+**Made with 💜 by the Tesseract Team**
 
-[🐛 Report Bug](https://github.com/your-org/Prism/issues) • [💡 Request Feature](https://github.com/your-org/Prism/issues/new) • [📖 Docs](https://github.com/your-org/Prism/wiki)
+[🐛 Report Bug](https://github.com/Dhrishit04/Tesseract/issues) • [💡 Request Feature](https://github.com/Dhrishit04/Tesseract/issues/new) • [📖 Docs](https://github.com/Dhrishit04/Tesseract/wiki)
 
 </div>
 

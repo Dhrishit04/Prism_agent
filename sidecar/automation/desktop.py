@@ -1,4 +1,4 @@
-"""Desktop GUI automation for Prism using Windows UIA (pywinauto) and OCR fallback."""
+"""Desktop GUI automation for Tesseract using Windows UIA (pywinauto) and OCR fallback."""
 
 import base64
 import logging

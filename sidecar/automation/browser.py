@@ -1,4 +1,4 @@
-"""Playwright-based web automation for Prism."""
+"""Playwright-based web automation for Tesseract."""
 
 import asyncio
 import base64

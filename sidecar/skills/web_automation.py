@@ -1,4 +1,4 @@
-"""Web automation skills for Prism - navigate, click, type, extract, screenshot, wait."""
+"""Web automation skills for Tesseract - navigate, click, type, extract, screenshot, wait."""
 
 import logging
 from typing import Any

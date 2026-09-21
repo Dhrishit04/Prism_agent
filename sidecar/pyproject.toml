@@ -1,7 +1,7 @@
 [project]
-name = "prism-sidecar"
+name = "tesseract-sidecar"
 version = "0.1.0"
-description = "Prism AI Agent Python sidecar"
+description = "Tesseract AI Agent Python sidecar"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

@@ -20,7 +20,7 @@ from automation.policy import load_automation_policy
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Prism Sidecar", version="0.1.0")
+app = FastAPI(title="Tesseract Sidecar", version="0.1.0")
 _client: Optional[OpenRouterClient] = None
 _registry = None
 
@@ -28,7 +28,7 @@ _registry = None
 def get_settings_path() -> str:
     """Get the path to the settings file."""
     home = os.path.expanduser("~")
-    return os.path.join(home, ".prism", "settings.json")
+    return os.path.join(home, ".tesseract", "settings.json")
 
 
 def load_settings() -> dict:

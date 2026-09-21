@@ -177,7 +177,7 @@ export function SettingsPanel() {
     <div className="flex-1 overflow-y-auto p-6 space-y-8">
       <div>
         <h2 className="text-xl font-bold text-prism-accent mb-2">Settings</h2>
-        <p className="text-prism-text-muted text-sm">Configure your Prism AI Agent preferences</p>
+        <p className="text-prism-text-muted text-sm">Configure your Tesseract AI Agent preferences</p>
       </div>
 
       {/* API Key Section */}
@@ -187,7 +187,7 @@ export function SettingsPanel() {
         </h3>
         <p className="text-prism-text-muted text-sm">
           Get your API key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-prism-accent hover:underline">OpenRouter</a>.
-          The key is stored locally in ~/.prism/settings.json and never sent anywhere except OpenRouter.
+          The key is stored locally in ~/.tesseract/settings.json and never sent anywhere except OpenRouter.
         </p>
         <div className="relative">
           <input
@@ -445,7 +445,7 @@ export function SettingsPanel() {
           />
           <span className="text-prism-text">Enable GUI automation (web + desktop)</span>
         </label>
-        <p className="text-prism-text-muted text-sm ml-8">Allows Prism to control browser, apps, and desktop (Phases 9-11)</p>
+        <p className="text-prism-text-muted text-sm ml-8">Allows Tesseract to control browser, apps, and desktop (Phases 9-11)</p>
 
         <div className="pt-4 border-t border-prism-border">
           <h4 className="text-md font-medium text-prism-text mb-3">Web Automation Settings</h4>
@@ -657,7 +657,7 @@ export function SettingsPanel() {
           <span className="text-prism-accent">💾</span> Data & Storage
         </h3>
         <p className="text-prism-text-muted text-sm">
-          Settings are stored in <code className="bg-prism-darker px-1.5 py-0.5 rounded text-prism-accent">~/.prism/settings.json</code>
+          Settings are stored in <code className="bg-prism-darker px-1.5 py-0.5 rounded text-prism-accent">~/.tesseract/settings.json</code>
         </p>
         <div className="flex gap-3 pt-2">
           <button

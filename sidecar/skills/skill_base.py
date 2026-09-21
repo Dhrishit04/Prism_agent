@@ -1,4 +1,4 @@
-"""Abstract base class for Prism skills."""
+"""Abstract base class for Tesseract skills."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -22,7 +22,7 @@ class SkillResult:
 
 
 class SkillBase(ABC):
-    """Abstract base class for all Prism skills.
+    """Abstract base class for all Tesseract skills.
 
     Each skill must implement:
     - name: unique identifier for the skill

@@ -1,4 +1,4 @@
-"""Google OAuth authentication module for Prism."""
+"""Google OAuth authentication module for Tesseract."""
 
 from .google_oauth import GoogleOAuthManager, get_google_oauth_manager
 

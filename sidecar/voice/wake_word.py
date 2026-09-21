@@ -45,7 +45,7 @@ class WakeWordDetector:
             on_detected: Callback when wake word is detected (receives keyword name)
         """
         self.access_key = access_key
-        self.keywords = keywords or ["jarvis"]  # Default to "jarvis" as closest to "prism"
+        self.keywords = keywords or ["jarvis"]  # Default wake word
         self.keyword_paths = keyword_paths or []
         self.sensitivities = sensitivities or [0.5] * len(self.keywords)
         self.on_detected = on_detected
