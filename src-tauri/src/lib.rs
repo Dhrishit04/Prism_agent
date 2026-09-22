@@ -1,8 +1,8 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::process::Command;
 use std::env;
+use std::process::Command;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -25,13 +25,29 @@ pub fn run() {
             // Spawn Python sidecar
             let sidecar_status = std::sync::Arc::new(std::sync::Mutex::new(String::from("stopped")));
             let status_clone = sidecar_status.clone();
+            let resource_dir = app.path().resource_dir().ok();
 
             // Spawn the Python sidecar process
             std::thread::spawn(move || {
-                let output = Command::new("python")
-                    .args(["sidecar/main.py"])
-                    .current_dir(env::current_dir().unwrap_or_default())
-                    .spawn();
+                let current_dir = env::current_dir().unwrap_or_default();
+                let packaged_sidecar = resource_dir
+                    .as_ref()
+                    .map(|path| path.join("tesseract-sidecar.exe"));
+                let development_sidecar = current_dir
+                    .join("sidecar")
+                    .join("dist")
+                    .join("tesseract-sidecar-x86_64-pc-windows-msvc.exe");
+
+                let output = if let Some(path) = packaged_sidecar.filter(|path| path.exists()) {
+                    Command::new(path).current_dir(&current_dir).spawn()
+                } else if development_sidecar.exists() {
+                    Command::new(development_sidecar).current_dir(&current_dir).spawn()
+                } else {
+                    Command::new("python")
+                        .args(["sidecar/main.py"])
+                        .current_dir(&current_dir)
+                        .spawn()
+                };
 
                 match output {
                     Ok(mut child) => {

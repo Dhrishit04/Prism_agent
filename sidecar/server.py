@@ -4,6 +4,7 @@ import os
 from typing import Optional, AsyncGenerator
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, RedirectResponse
 from pydantic import BaseModel
 
@@ -21,6 +22,13 @@ from automation.policy import load_automation_policy
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Tesseract Sidecar", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:1420", "http://127.0.0.1:1420"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 _client: Optional[OpenRouterClient] = None
 _registry = None
 
@@ -41,6 +49,18 @@ def load_settings() -> dict:
         except Exception:
             pass
     return {}
+
+
+def save_settings(settings: dict) -> None:
+    """Persist settings while keeping the file valid if interrupted."""
+    path = get_settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temporary_path = f"{path}.tmp"
+    with open(temporary_path, "w", encoding="utf-8") as file:
+        json.dump(settings, file, indent=2)
+        file.flush()
+        os.fsync(file.fileno())
+    os.replace(temporary_path, path)
 
 
 def get_client() -> OpenRouterClient:
@@ -229,11 +249,41 @@ async def chat(request: MessageRequest):
     tools = registry.get_tool_definitions()
 
     messages = request.history + [{"role": "user", "content": request.message}]
-    result = await client.chat(messages, model=request.model, tools=tools)
-    if result.get("error"):
-        raise HTTPException(status_code=502, detail=result.get("message"))
-    content = result["choices"][0]["message"]["content"]
-    return {"response": content}
+    for _ in range(10):
+        result = await client.chat(messages, model=request.model, tools=tools)
+        if result.get("error"):
+            raise HTTPException(status_code=502, detail=result.get("message"))
+
+        assistant_message = result["choices"][0]["message"]
+        tool_calls = assistant_message.get("tool_calls") or []
+        if not tool_calls:
+            return {"response": assistant_message.get("content") or ""}
+
+        tool_results = []
+        for tool_call in tool_calls:
+            function = tool_call.get("function", {})
+            try:
+                arguments = json.loads(function.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                arguments = {}
+            skill_result = await registry.execute_skill(function.get("name", ""), **arguments)
+            tool_results.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.get("id", ""),
+                    "name": function.get("name", ""),
+                    "content": json.dumps(
+                        {
+                            "success": skill_result.success,
+                            "data": skill_result.data,
+                            "error": skill_result.error,
+                        }
+                    ),
+                }
+            )
+        messages.extend([assistant_message, *tool_results])
+
+    raise HTTPException(status_code=502, detail="Tool-calling loop exceeded 10 turns")
 
 
 @app.get("/models")
@@ -252,6 +302,9 @@ async def configure(data: dict):
     global _client
     api_key = data.get("api_key", "")
     _client = OpenRouterClient(api_key=api_key)
+    settings = load_settings()
+    settings["openrouter_api_key"] = api_key
+    save_settings(settings)
     return {"status": "ok"}
 
 
@@ -604,6 +657,12 @@ class OfficeReadExcelRequest(BaseModel):
     path: str
 
 
+class OfficeCreatePresentationRequest(BaseModel):
+    template: str | None = None
+    slides: list[dict] = []
+    output_path: str
+
+
 def get_office_engine():
     """Get the Office engine configured by the user's automation settings."""
     settings = load_settings()
@@ -653,6 +712,21 @@ def office_read_excel(request: OfficeReadExcelRequest):
         return {"success": True, "data": get_office_engine().read_excel(request.path)}
     except Exception as exc:
         logger.error("Error reading Excel workbook: %s", exc)
+        return {"success": False, "error": str(exc)}
+
+
+@app.post("/automation/office/create-presentation")
+def office_create_presentation(request: OfficeCreatePresentationRequest):
+    """Create a PowerPoint presentation."""
+    try:
+        data = get_office_engine().create_presentation(
+            request.template,
+            request.slides,
+            request.output_path,
+        )
+        return {"success": True, "data": data}
+    except Exception as exc:
+        logger.error("Error creating presentation: %s", exc)
         return {"success": False, "error": str(exc)}
 
 
@@ -816,8 +890,7 @@ async def update_automation_settings(request: dict):
     # Save settings
     path = get_settings_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(settings, f, indent=2)
+    save_settings(settings)
 
     return {"success": True, "settings": settings["automation"]}
 

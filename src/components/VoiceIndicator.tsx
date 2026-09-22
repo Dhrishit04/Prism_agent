@@ -117,8 +117,8 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
       case "listening":
         return {
           icon: "🎤",
-          color: "text-prism-accent",
-          bgColor: "bg-prism-accent/10",
+          color: "text-tesseract-accent",
+          bgColor: "bg-tesseract-accent/10",
           pulse: true,
           tooltip: "Listening for wake word...",
         };
@@ -149,8 +149,8 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
       default:
         return {
           icon: voiceEnabled ? "🎤" : "🎤",
-          color: voiceEnabled ? "text-prism-text-muted" : "text-prism-text-muted/50",
-          bgColor: "bg-prism-surface",
+          color: voiceEnabled ? "text-tesseract-text-muted" : "text-tesseract-text-muted/50",
+          bgColor: "bg-tesseract-surface",
           pulse: false,
           tooltip: voiceEnabled ? "Voice ready (click to listen)" : "Voice disabled",
         };
@@ -164,7 +164,7 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
       <button
         onClick={() => {}}
         disabled
-        className={`p-2 rounded-lg transition-all ${config.bgColor} ${config.color} hover:bg-prism-border`}
+        className={`p-2 rounded-lg transition-all ${config.bgColor} ${config.color} hover:bg-tesseract-border`}
         title="Enable voice in Settings to use this feature"
       >
         <span className="text-lg">{config.icon}</span>
@@ -181,7 +181,7 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
         className={`
           p-2 rounded-lg transition-all
           ${config.bgColor} ${config.color}
-          hover:bg-prism-border
+          hover:bg-tesseract-border
           disabled:opacity-50 disabled:cursor-not-allowed
           ${config.pulse ? "animate-pulse" : ""}
         `}
@@ -194,7 +194,7 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
       {voiceState === "listening" && (
         <button
           onClick={handleSttToggle}
-          className="p-2 rounded-lg bg-prism-surface border border-prism-border text-prism-text-muted hover:bg-prism-border hover:text-prism-text transition-colors"
+          className="p-2 rounded-lg bg-tesseract-surface border border-tesseract-border text-tesseract-text-muted hover:bg-tesseract-border hover:text-tesseract-text transition-colors"
           title="Start recording manually"
         >
           <span className="text-lg">🎙️</span>
@@ -205,7 +205,7 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
       {voiceState === "speaking" && (
         <button
           onClick={handleStopTts}
-          className="p-2 rounded-lg bg-prism-surface border border-prism-border text-prism-text-muted hover:bg-prism-border hover:text-prism-text transition-colors"
+          className="p-2 rounded-lg bg-tesseract-surface border border-tesseract-border text-tesseract-text-muted hover:bg-tesseract-border hover:text-tesseract-text transition-colors"
           title="Stop speaking"
         >
           <span className="text-lg">⏹️</span>
@@ -217,9 +217,9 @@ export function VoiceIndicator({ onTranscription }: VoiceIndicatorProps) {
         className={`
           w-2 h-2 rounded-full transition-colors
           ${voiceState === "idle"
-            ? "bg-prism-text-muted/30"
+            ? "bg-tesseract-text-muted/30"
             : voiceState === "listening"
-            ? "bg-prism-accent animate-pulse"
+            ? "bg-tesseract-accent animate-pulse"
             : voiceState === "recording"
             ? "bg-red-400 animate-pulse"
             : voiceState === "speaking"

@@ -45,22 +45,22 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-prism-dark">
+    <div className="flex h-screen bg-tesseract-dark">
       {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-0"
-        } transition-all duration-200 bg-prism-darker border-r border-prism-border overflow-hidden flex flex-col`}
+        } transition-all duration-200 bg-tesseract-darker border-r border-tesseract-border overflow-hidden flex flex-col`}
       >
         <div className="p-4">
-          <h1 className="text-lg font-bold text-prism-accent">Tesseract</h1>
+          <h1 className="text-lg font-bold text-tesseract-accent">Tesseract</h1>
           <nav className="mt-6 space-y-2">
             <button
               onClick={() => handleNavClick("chat")}
               className={`w-full text-left px-3 py-2 rounded transition-colors ${
                 activeView === "chat"
-                  ? "bg-prism-surface text-prism-text"
-                  : "text-prism-text-muted hover:bg-prism-surface"
+                  ? "bg-tesseract-surface text-tesseract-text"
+                  : "text-tesseract-text-muted hover:bg-tesseract-surface"
               }`}
             >
               💬 Chat
@@ -69,18 +69,18 @@ function App() {
               onClick={() => handleNavClick("settings")}
               className={`w-full text-left px-3 py-2 rounded transition-colors ${
                 activeView === "settings"
-                  ? "bg-prism-surface text-prism-text"
-                  : "text-prism-text-muted hover:bg-prism-surface"
+                  ? "bg-tesseract-surface text-tesseract-text"
+                  : "text-tesseract-text-muted hover:bg-tesseract-surface"
               }`}
             >
               ⚙️ Settings
             </button>
           </nav>
         </div>
-        <div className="mt-auto p-4 border-t border-prism-border">
+        <div className="mt-auto p-4 border-t border-tesseract-border">
           <button
             onClick={clearMessages}
-            className="w-full text-left px-3 py-2 rounded text-prism-text-muted hover:bg-prism-surface transition-colors text-sm"
+            className="w-full text-left px-3 py-2 rounded text-tesseract-text-muted hover:bg-tesseract-surface transition-colors text-sm"
           >
             🗑️ Clear chat
           </button>
@@ -90,14 +90,14 @@ function App() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="h-12 border-b border-prism-border flex items-center px-4 gap-3">
+        <header className="h-12 border-b border-tesseract-border flex items-center px-4 gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-prism-text-muted hover:text-prism-text"
+            className="text-tesseract-text-muted hover:text-tesseract-text"
           >
             ☰
           </button>
-          <span className="text-sm text-prism-text-muted flex-1">Tesseract AI</span>
+          <span className="text-sm text-tesseract-text-muted flex-1">Tesseract AI</span>
           {activeView === "chat" && (
             <>
               <ModelPicker currentModel={currentModel} onModelChange={setCurrentModel} />
@@ -118,11 +118,11 @@ function App() {
           {activeView === "chat" && (
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 && (
-                <div className="flex items-center justify-center h-full text-prism-text-muted">
+                <div className="flex items-center justify-center h-full text-tesseract-text-muted">
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-prism-accent mb-2">Tesseract</h2>
+                    <h2 className="text-2xl font-bold text-tesseract-accent mb-2">Tesseract</h2>
                     <p>How can I help you today?</p>
-                    <div className="mt-4 text-xs text-prism-text-muted/50">
+                    <div className="mt-4 text-xs text-tesseract-text-muted/50">
                       Model: {currentModel}
                     </div>
                   </div>
@@ -138,8 +138,8 @@ function App() {
                   <div
                     className={`max-w-[70%] rounded-lg px-4 py-2 ${
                       msg.role === "user"
-                        ? "bg-prism-accent text-white"
-                        : "bg-prism-surface text-prism-text"
+                        ? "bg-tesseract-accent text-white"
+                        : "bg-tesseract-surface text-tesseract-text"
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">
@@ -150,8 +150,8 @@ function App() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-prism-surface rounded-lg px-4 py-2">
-                    <span className="animate-pulse text-prism-text-muted">▌</span>
+                  <div className="bg-tesseract-surface rounded-lg px-4 py-2">
+                    <span className="animate-pulse text-tesseract-text-muted">▌</span>
                   </div>
                 </div>
               )}
@@ -163,7 +163,7 @@ function App() {
 
         {/* Input (only shown in chat view) */}
         {activeView === "chat" && (
-          <div className="border-t border-prism-border p-4">
+          <div className="border-t border-tesseract-border p-4">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -172,12 +172,12 @@ function App() {
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 placeholder={isLoading ? "Waiting for response..." : "Type a message..."}
                 disabled={isLoading}
-                className="flex-1 bg-prism-surface border border-prism-border rounded-lg px-4 py-2 text-prism-text placeholder-prism-text-muted focus:outline-none focus:border-prism-accent disabled:opacity-50"
+                className="flex-1 bg-tesseract-surface border border-tesseract-border rounded-lg px-4 py-2 text-tesseract-text placeholder-tesseract-text-muted focus:outline-none focus:border-tesseract-accent disabled:opacity-50"
               />
               <button
                 onClick={handleSend}
                 disabled={isLoading}
-                className="bg-prism-accent hover:bg-prism-accent-hover text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="bg-tesseract-accent hover:bg-tesseract-accent-hover text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 Send
               </button>

@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        prism: {
+        tesseract: {
           dark: "#0f0f1a",
           darker: "#0a0a14",
           accent: "#6366f1",

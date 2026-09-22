@@ -62,15 +62,15 @@ export function ModelPicker({ currentModel, onModelChange }: ModelPickerProps) {
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-prism-surface border border-prism-border rounded-md text-prism-text hover:border-prism-accent transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-tesseract-surface border border-tesseract-border rounded-md text-tesseract-text hover:border-tesseract-accent transition-colors"
         disabled={loading}
       >
         {loading ? "Loading..." : displayName({ id: currentModel })}
-        <span className="text-prism-text-muted">▼</span>
+        <span className="text-tesseract-text-muted">▼</span>
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 right-0 w-64 bg-prism-surface border border-prism-border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+        <div className="absolute top-full mt-1 right-0 w-64 bg-tesseract-surface border border-tesseract-border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
           {models.map((model) => (
             <button
               key={model.id}
@@ -78,10 +78,10 @@ export function ModelPicker({ currentModel, onModelChange }: ModelPickerProps) {
                 onModelChange(model.id);
                 setIsOpen(false);
               }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-prism-accent/20 transition-colors ${
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-tesseract-accent/20 transition-colors ${
                 currentModel === model.id
-                  ? "text-prism-accent bg-prism-accent/10"
-                  : "text-prism-text"
+                  ? "text-tesseract-accent bg-tesseract-accent/10"
+                  : "text-tesseract-text"
               }`}
             >
               {displayName(model)}

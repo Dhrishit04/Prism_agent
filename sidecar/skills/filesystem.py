@@ -7,6 +7,17 @@ from typing import Any
 from skills.skill_base import SkillBase, SkillResult
 
 
+def _workspace_path(path_str: str) -> tuple[Path | None, str | None]:
+    """Resolve a path and reject paths outside the workspace."""
+    workspace = Path.cwd().resolve()
+    path = Path(path_str).expanduser().resolve()
+    try:
+        path.relative_to(workspace)
+    except ValueError:
+        return None, f"Access denied: path outside workspace: {path}"
+    return path, None
+
+
 class FilesystemReadFileSkill(SkillBase):
     """Skill to read a file from the filesystem."""
 
@@ -37,11 +48,10 @@ class FilesystemReadFileSkill(SkillBase):
             return SkillResult.failure("Path parameter is required")
 
         try:
-            path = Path(path_str).resolve()
-            # Security: only allow reading from current working directory or subdirectories
-            cwd = Path.cwd().resolve()
-            if not str(path).startswith(str(cwd)):
-                return SkillResult.failure(f"Access denied: path outside workspace: {path}")
+            path, error = _workspace_path(path_str)
+            if error:
+                return SkillResult.failure(error)
+            assert path is not None
 
             if not path.exists():
                 return SkillResult.failure(f"File not found: {path}")
@@ -85,10 +95,10 @@ class FilesystemListDirSkill(SkillBase):
             return SkillResult.failure("Path parameter is required")
 
         try:
-            path = Path(path_str).resolve()
-            cwd = Path.cwd().resolve()
-            if not str(path).startswith(str(cwd)):
-                return SkillResult.failure(f"Access denied: path outside workspace: {path}")
+            path, error = _workspace_path(path_str)
+            if error:
+                return SkillResult.failure(error)
+            assert path is not None
 
             if not path.exists():
                 return SkillResult.failure(f"Directory not found: {path}")
@@ -197,12 +207,10 @@ class FilesystemSearchSkill(SkillBase):
         path_str = kwargs.get("path", ".")
 
         try:
-            root_path = Path(path_str).resolve()
-            cwd = Path.cwd().resolve()
-            
-            # Security: ensure search root is within workspace
-            if not str(root_path).startswith(str(cwd)):
-                return SkillResult.failure(f"Access denied: path outside workspace: {root_path}")
+            root_path, error = _workspace_path(path_str)
+            if error:
+                return SkillResult.failure(error)
+            assert root_path is not None
             
             if not root_path.exists() or not root_path.is_dir():
                 return SkillResult.failure(f"Search root is not a valid directory: {root_path}")
@@ -216,7 +224,12 @@ class FilesystemSearchSkill(SkillBase):
                 
                 # Make paths relative to root_path for cleaner output
                 try:
-                    rel_path = p.relative_to(root_path)
+                    resolved_path = p.resolve()
+                    validated_path, error = _workspace_path(str(resolved_path))
+                    if error:
+                        continue
+                    assert validated_path is not None
+                    rel_path = validated_path.relative_to(root_path)
                     matches.append(str(rel_path))
                 except ValueError:
                     matches.append(str(p))
