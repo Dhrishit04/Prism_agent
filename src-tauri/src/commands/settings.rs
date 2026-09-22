@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VoiceSettings {
     pub voice_enabled: bool,
     pub wake_word: String,
@@ -16,7 +16,7 @@ pub struct VoiceSettings {
     pub openrouter_tts_voice: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AutomationSettings {
     pub automation_enabled: bool,
     pub browser_timeout: u32,

@@ -10,8 +10,6 @@ use tauri::{
     Manager,
     Emitter,
 };
-use tauri_plugin_shell::ShellExt;
-
 mod commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

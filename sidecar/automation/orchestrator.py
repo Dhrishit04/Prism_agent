@@ -24,6 +24,9 @@ class AutomationOrchestrator:
 
     async def start_web(self, headless: bool = True, timeout: int = 30000):
         """Start web automation session."""
+        policy = load_automation_policy()
+        if not policy["automation_enabled"]:
+            raise RuntimeError("Automation is disabled in settings")
         from automation.browser import WebAutomation
         self.web_automation = WebAutomation(headless=headless, timeout=timeout)
         await self.web_automation.__aenter__()
@@ -34,9 +37,13 @@ class AutomationOrchestrator:
         if self.web_automation:
             await self.web_automation.close()
             self.web_automation = None
+        self.mode = AutomationMode.DESKTOP if self.desktop_active else AutomationMode.INACTIVE
 
     async def execute_web_action(self, action: str, **kwargs) -> dict[str, Any]:
         """Execute web automation action."""
+        policy = load_automation_policy()
+        if not policy["automation_enabled"]:
+            return {"success": False, "error": "Automation is disabled in settings"}
         if not self.web_automation:
             return {"success": False, "error": "Web automation not started. Call start_web first."}
 

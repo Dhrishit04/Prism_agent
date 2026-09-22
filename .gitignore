@@ -12,13 +12,15 @@ sidecar/dist/
 sidecar/*.spec
 sidecar/tesseract_sidecar.egg-info/
 sidecar/prism_sidecar.egg-info/
-sidecar/*.log
+*.log
+__pycache__
 ~/.tesseract/
 msys2/
 *.msi
 *.exe
 src-tauri/target/
 *.wixobj
-*.wixpdbInput.txt
+*.wixpdb
+build/
 
 docs/

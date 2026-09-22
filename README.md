@@ -256,6 +256,21 @@ sequenceDiagram
 
 ## ⚙️ Configuration
 
+### Development Checks and Packaging
+
+Run the sidecar checks from the repository root:
+
+```powershell
+$env:PYTHONPATH = "$PWD\sidecar"
+python -m unittest discover -s sidecar/tests -p "test_*.py"
+python -m compileall -q sidecar
+```
+
+The repeatable Windows sidecar build is `sidecar/build.ps1`, which produces
+`sidecar/dist/prism-sidecar.exe` using `sidecar/pyinstaller.spec`. The GitHub
+Actions workflow in `.github/workflows/ci.yml` validates the frontend, sidecar,
+and Rust backend on every push and pull request.
+
 ### Settings File (`~/.tesseract/settings.json`)
 
 Following the **Claude Code pattern** — UI reads/writes JSON directly via Tauri FS API. No backend API needed.

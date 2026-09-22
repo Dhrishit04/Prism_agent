@@ -7,16 +7,11 @@ from skills.skill_base import SkillBase, SkillResult
 
 logger = logging.getLogger(__name__)
 
-# Global orchestrator instance
-_orchestrator = None
-
-
 def _get_orchestrator():
-    global _orchestrator
-    if _orchestrator is None:
-        from automation.orchestrator import AutomationOrchestrator
-        _orchestrator = AutomationOrchestrator()
-    return _orchestrator
+    """Use the process-wide orchestrator shared by API and skill calls."""
+    from automation.orchestrator import get_automation_orchestrator
+
+    return get_automation_orchestrator()
 
 
 class WebAutomationNavigateSkill(SkillBase):
